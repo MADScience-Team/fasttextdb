@@ -1,0 +1,27 @@
+<!doctype html>
+
+<html lang="en">
+    <head>
+	<meta charset="utf-8">
+
+	<title>FastText Error</title>
+	<meta name="description" content="FastText Error">
+	<meta name="author" content="FastText DB">
+
+	<link rel="stylesheet" href="{{ url_for('bootstrap', file='css/bootstrap.min.css') }}"/>
+	
+	<!--[if lt IE 9]>
+	    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.js"></script>
+	<![endif]-->
+    </head>
+
+    <body>
+	<div class="container" >
+	    <div class="row" >
+		<h1>An Error Occurred</h1>
+		<p>Status code: {{ error.status }} ({{ error.status_name }})</p>
+		<p>The message was: {{ error.message }}</p>
+	    </div>
+	</div>
+    </body>
+</html>

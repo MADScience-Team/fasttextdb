@@ -1,2 +1,7 @@
 *-journal
 *.pyc
+*.yml
+*.db
+scratch
+venv
+node_modules

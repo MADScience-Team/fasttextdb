@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}FastText Model Vectors{% endblock %}
+{% block content %}
+<div class="row">
+    <a class="col-md-1" href="{{ url_for(method, id=model.id, page=page-1, page_size=page_size, words=words) }}">Prev</a>
+    <a class="col-md-1" href="{{ url_for(method, id=model.id, page=page+1, page_size=page_size, words=words) }}">Next</a>
+    <h1>
+	{% block header %}
+	Vectors {{ start + 1 }} - {{ end }} for model {{ model.name }}
+	{% endblock %}
+    </h1>
+    <table class="table table-striped">
+	<thead>
+	    <tr>
+		<th rowspan="2">Word</th>
+		<th colspan="{{ model.vector_length }}">Vector</th>
+	    </tr>
+	    <tr>
+		{% for x in range(model.vector_length) %}
+		<th>{{ x + 1 }}</th>
+		{% endfor %}
+	    </tr>
+	</thead>
+	<tbody>
+	    {% for vector in vectors %}
+	    <tr>
+		<td>{{ vector.word }}</td>
+		{% for x in vector.unpack_values() %}
+		<td>{{ x }}</td>
+		{% endfor %}
+	    </tr>
+	    {% endfor %}
+	</tbody>
+    </table>
+</div>
+{% endblock %}

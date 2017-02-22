@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}FastText Models{% endblock %}
+{% block content %}
+<div class="container" >
+    <h1>{% block header %}Models {{ start+1 }}-{{ end }} of {{ total }}{% endblock %}</h1>
+    <div class="row" >
+	<table class="table table-striped">
+	    <thead>
+		<th>Owner</th>
+		<th>Name</th>
+		<th>Description</th>
+		<th># of words</th>
+		<th>Vector length</th>
+	    </thead>
+	    <tbody>
+		{% for model in models %}
+		<tr>
+		    <td>{{ model.owner }}</td>
+		    <td><a href="{{ url_for('vectors_for_model', id=model.id) }}">{{ model.name }}</a></td>
+		    <td>{{ model.description }}</td>
+		    <td>{{ model.num_words }}</td>
+		    <td>{{ model.vector_length }}</td>
+		</tr>
+		{% endfor %}
+	    </tbody>
+	</table>
+    </div>
+</div>
+{% endblock %}

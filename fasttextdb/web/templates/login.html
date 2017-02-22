@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}FastText Models{% endblock %}
+{% block content %}
+<div>
+    <div class="row">
+	<div class="col-md-8">
+	    {% with messages = get_flashed_messages() %}
+	    {% if messages %}
+	    {% for message in messages %}
+	    <h1>{{ message or 'Login to FastTextDB' }}</h1>
+	    {% endfor %}
+	    {% endif %}
+	    {% endwith %}
+	</div>
+    </div>
+    <form class="form-horizontal" action="" method="post">
+	<input type="hidden" value="{{ next }}"/>
+	<div class="form-group" >
+	    <label for="name" class="control-label col-md-2">
+		Name
+	    </label>
+	    <div class="col-md-4" >
+		<input class="form-control"
+		       name="name"
+		       id="name"
+		       autofocus="autofocus"
+		       tabindex="1"
+		       placeholder="User name" />
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="name" class="control-label col-md-2">
+		Password
+	    </label>
+	    <div class="col-md-4" >
+		<input class="form-control"
+		       type="password"
+		       name="password"
+		       id="password"
+		       tabindex="2"
+		       placeholder="Password" />
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <div class="col-md-2" ></div>
+	    <div class="col-md-4" >
+		<button type="submit" class="btn btn-primary" >Login</button>
+	    </div>
+	</div>
+    </form>
+</div>
+{% endblock %}

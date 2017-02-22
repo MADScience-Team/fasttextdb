@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block title %}FastText Models{% endblock %}
+{% block content %}
+<div>
+    <div class="row" >
+	<div class="col-md-6" >
+	    {% if model and model.name %}
+	    <h1>Edit model {{ model.name }}</h1>
+	    {% else %}
+	    <h1>Create new model</h1>
+	    {% endif %}
+	</div>
+    </div>
+    <form class="form-horizontal" action="{{ submit_action }}" method="{{ submit_method }}">
+	<div class="form-group" >
+	    <label for="name" class="control-label col-md-2">
+		Name
+	    </label>
+	    <div class="col-md-4" >
+		<input class="form-control"
+		       name="name"
+		       id="name"
+		       value="{{ model.name or '' }}"
+		       placeholder="Descriptive name" />
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="description" class="control-label col-md-2">
+		Description
+	    </label>
+	    <div class="col-md-4" >
+		<textarea name="description"
+			  id="description"
+			  class="form-control"
+			  rows="3">{{ model.description or '' }}</textarea>
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="dim"
+		   class="control-label col-md-2" >
+		Dimensions
+	    </label>
+	    <div class="col-md-4" >
+		<input type="number"
+		       class="form-control"
+		       name="dim"
+		       id="dim"
+		       value="{{ model.dim or 100 }}"
+		       placeholder="Size of vector" />
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="inputFile"
+		   class="control-label col-md-2" >
+		Input file name
+	    </label>
+	    <div class="col-md-4" >
+		<input class="form-control"
+		       name="inputFile"
+		       id="inputFile"
+		       value="{{ model.input_file or '' }}"
+		       placeholder="Input file name" />
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="outputFile"
+		   class="control-label col-md-2" >
+		Output file name
+	    </label>
+	    <div class="col-md-4" >
+		<input class="form-control"
+		       name="outputFile"
+		       id="outputFile"
+		       value="{{ model.output_file or '' }}"
+		       placeholder="Output file name" />
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="learningRate"
+		   class="control-label col-md-2" >
+		Learning rate
+	    </label>
+	    <div class="col-md-4" >
+		<input type="number"
+		       min="0"
+		       max="1"
+		       step="0.01"
+		       class="form-control"
+		       name="learningRate"
+		       id="learningRate"
+		       min="0.01"
+		       value="{{ model.learning_rate or 0.05 }}"
+		       placeholder="Between 0-1" />
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="learningRateUpdateRateChange"
+		   class="control-label col-md-2" >
+		Learning rate change
+	    </label>
+	    <div class="col-md-4" >
+		<input type="number"
+		       class="form-control"
+		       name="learningRateUpdateRateChange"
+		       id="learningRateUpdateRateChange"
+		       min="1"
+		       value="{{ model.learning_rate_update_rate_change or 100 }}"
+		       placeholder="Change in learning rate" />
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="windowSize"
+		   class="control-label col-md-2" >
+		Context window size
+	    </label>
+	    <div class="col-md-4" >
+		<input type="number"
+		       class="form-control"
+		       name="windowSize"
+		       id="windowSize"
+		       value="{{ model.window_size or 5 }}"
+		       placeholder="Context window size" >
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="epoch"
+		   class="control-label col-md-2" >
+		Number of epochs
+	    </label>
+	    <div class="col-md-4" >
+		<input type="number"
+		       class="form-control"
+		       name="epoch"
+		       id="epoch"
+		       min="1"
+		       value="{{ model.epoch or 5 }}"
+		       placeholder="Number of epochs" >
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="minCount"
+		   class="control-label col-md-2" >
+		Min # of word occurrences
+	    </label>
+	    <div class="col-md-4" >
+		<input type="number"
+		       class="form-control"
+		       name="minCount"
+		       id="minCount"
+		       min="1"
+		       value="{{ model.min_count or 5 }}"
+		       placeholder="Number of word occurrences" >
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="negativesSampled"
+		   class="control-label col-md-2" >
+		# of negatives sampled
+	    </label>
+	    <div class="col-md-4" >
+		<input type="number"
+		       class="form-control"
+		       name="negativesSampled"
+		       id="negativesSampled"
+		       min="1"
+		       value="{{ model.negatives_sampled or 5 }}"
+		       placeholder="# of negatives sampled" >
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="wordNgrams"
+		   class="control-label col-md-2" >
+		Max. word ngram size
+	    </label>
+	    <div class="col-md-4" >
+		<input type="number"
+		       class="form-control"
+		       name="wordNgrams"
+		       id="wordNgrams"
+		       min="1"
+		       value="{{ model.word_ngrams or 1 }}"
+		       placeholder="Max ngram length" >
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="lossFunction"
+		   class="control-label col-md-2" >
+		Loss function
+	    </label>
+	    <div class="col-md-4" >
+		<select name="lossFunction"
+			id="lossFunction"
+			class="form-control">
+		    <option {% if model.loss_function=='ns' %} selected="selected" {% endif %} >ns</option>
+		    <option {% if model.loss_function=='hs' %} selected="selected" {% endif %}>hs</option>
+		    <option {% if not model.loss_function or model.loss_function=='softmax' %} selected="selected" {% endif %}>softmax</option>
+		</select>
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="numBuckets" class="control-label col-md-2" >
+		# of buckets
+	    </label>
+	    <div class="col-md-4" >
+		<input type="number"
+		       class="form-control"
+		       name="numBuckets"
+		       id="numBuckets"
+		       value="{{ model.num_buckets or 2000000 }}"
+		       min="1"
+		       placeholder="# of buckets" >
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="minNgramLen" class="control-label col-md-2" >
+		Min. ngram length
+	    </label>
+	    <div class="col-md-4" >
+		<input type="number"
+		       class="form-control"
+		       name="minNgramLen"
+		       id="minNgramLen"
+		       min="1"
+		       value="{{ model.min_ngram_len or 3 }}"
+		       placeholder="Min. ngram length" >
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="maxNgramLen" class="control-label col-md-2" >
+		Max. ngram length
+	    </label>
+	    <div class="col-md-4" >
+		<input type="number"
+		       class="form-control"
+		       name="maxNgramLen"
+		       id="maxNgramLen"
+		       min="1"
+		       value="{{ model.max_ngram_len or 6 }}"
+		       placeholder="Max. ngram length" >
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="numThreads" class="control-label col-md-2" >
+		# of threads
+	    </label>
+	    <div class="col-md-4" >
+		<input type="number"
+		       class="form-control"
+		       name="numThreads"
+		       id="numThreads"
+		       min="1" 
+		       value="{{ model.num_threads or 12 }}"
+		       placeholder="# of threads" >
+	    </div>
+	</div>
+	<div class="form-group" >
+	    <label for="samplingThreshold" class="control-label col-md-2" >
+		Sampling threshold
+	    </label>
+	    <div class="col-md-4" >
+		<input type="number"
+		       class="form-control"
+		       name="samplingThreshold"
+		       id="samplingThreshold"
+		       placeholder="Sampling threshold, e.g. 0.0001"
+		       value="{{ model.sampling_threshold or 0.0001 }}"
+		       min="0.0001" max="1" step="0.0001"  >
+	    </div>
+	</div>
+	<button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}FastText Models{% endblock %}
+{% block content %}
+<div class="container">
+    <div class="row">
+	<div class="col-md-6">
+	    <h1>Model {{ model.name }}</h1>
+	</div>
+    </div>
+    <a href="/model/{{ model.id }}/upload/vectors" >Upload vectors for this model</a>
+    <div class="row" >
+	<div class="col-md-8" >
+	    <div class="row" >
+		<table class="table">
+		    <thead>
+		    </thead>
+		    <tbody>
+			<tr>
+			    <th class="col-md-4">Name</th>
+			    <td class="col-md-8">{{ model.name }}</td>
+			</tr>
+			<tr>
+			    <th class="col-md-4">Description</th>
+			    <td class="col-md-8">{{ model.description }}</td>
+			</tr>
+			<tr>
+			    <th class="col-md-4">Dimensions</th>
+			    <td class="col-md-8">{{ model.dim }}</td>
+			</tr>
+			<tr>
+			    <th class="col-md-4">Input file name</th>
+			    <td class="col-md-8">{{ model.input_file }}</td>
+			</tr>
+			<tr>
+			    <th class="col-md-4">Output file name</th>
+			    <td class="col-md-8">{{ model.output_file }}</td>
+			</tr>
+			<tr>
+			    <th class="col-md-4">Learning rate</th>
+			    <td class="col-md-8">{{ model.learning_rate }}</td>
+			</tr>
+			<tr>
+			    <th class="col-md-4">Learning rate change</th>
+			    <td class="col-md-8">{{ model.learning_rate_update_rate_change }}</td>
+			</tr>
+			<tr>
+			    <th class="col-md-4">Context window size</th>
+			    <td class="col-md-8">{{ model.window_size }}</td>
+			</tr>
+			<tr>
+			    <th class="col-md-4">Number of epochs</th>
+			    <td class="col-md-8">{{ model.epoch }}</td>
+			</tr>
+			<tr>
+			    <th class="col-md-4">Min # of word occurrences</th>
+			    <td class="col-md-8">{{ model.min_count }}</td>
+			</tr>
+			<tr>
+			    <th class="col-md-4">Negatives sampled</th>
+			    <td class="col-md-8">{{ model.negatives_sampled }}</td>
+			</tr>
+			<tr>
+			    <th class="col-md-4">Max length of ngram</th>
+			    <td class="col-md-8">{{ model.word_ngrams }}</td>
+			</tr>
+			<tr>
+			    <th class="col-md-4">Loss function</th>
+			    <td class="col-md-8">{{ model.loss_function }}</td>
+			</tr>
+			<tr>
+			    <th class="col-md-4"># buckets</th>
+			    <td class="col-md-8">{{ model.num_buckets }}</td>
+			</tr>
+			<tr>
+			    <th class="col-md-4">Min. ngram length</th>
+			    <td class="col-md-8">{{ model.min_ngram_len }}</td>
+			</tr>
+			<tr>
+			    <th class="col-md-4">Max. ngram length</th>
+			    <td class="col-md-8">{{ model.max_ngram_len }}</td>
+			</tr>
+			<tr>
+			    <th class="col-md-4"># threads</th>
+			    <td class="col-md-8">{{ model.num_threads }}</td>
+			</tr>
+			<tr>
+			    <th class="col-md-4">Sampling threshold</th>
+			    <td class="col-md-8">{{ model.sampling_threshold }}</td>
+			</tr>
+		    </tbody>
+		</table>
+	    </div>
+	</div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Upload model data{% endblock %}
+{% block content %}
+<div class="container" >
+    <h1>Upload a file for model: {{ model.name }}</h1>
+    <p>Acceptable formats are gzip, bzip2, or text</p>
+    
+    <form enctype="multipart/form-data"
+	  action="/model/{{ model.id }}/upload/vectors"
+	  method="post">
+
+	<input id="file"
+	       name="file"
+	       type="file"
+	       class="file"
+	       accept="application/x-bzip2 application/x-gzip application/gzip text/plain"/>
+
+	<button type="submit" class="btn btn-primary">Submit</button>
+
+    </form>
+</div>
+{% endblock %}
