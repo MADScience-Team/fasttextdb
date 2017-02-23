@@ -1,7 +1,7 @@
 import requests
 
 from argparse import FileType
-from fasttextdb import get_parser, load_config, FasttextApi, open_for_mime_type, model_from_file, vectors, read_file
+from fasttextdb import get_parser, load_config, FasttextApi, open_for_mime_type, model_from_file, vectors, read_model_file
 
 parser = get_parser('upload a vectors file to the web API')
 
@@ -21,7 +21,7 @@ with open(args.upload, 'rb') as file:
         with model_from_file(file) as (m, file1):
             buff = []
 
-            for word, values in read_file(file1):
+            for word, values in read_model_file(file1):
                 buff.append({'word': word, 'values': values})
 
                 if len(buff) >= 1000:

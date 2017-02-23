@@ -28,6 +28,10 @@ Base = declarative_base()
 
 
 class User(Base, UserMixin):
+    """
+    Contains information sufficient to authenticate a user by user ID
+    and password
+    """
     __tablename__ = 'user'
     id = Column(Integer, primary_key=True)
     name = Column(String)
@@ -105,10 +109,12 @@ class Model(Base):
 
 class Vector(Base):
     """
-    Vector for an individual word. Since vectors for different models can have
-    different lengths, let's store the values as a simple packed binary blob
-    instead of individual float columns. Plus it's quite a bit faster when
-    writing the values to the database, at least with sqlite.
+    Vector for an individual word. Since vectors for different models
+    can have different lengths, we'll store the values as a simple
+    packed blob of some sort instead of individual float columns. Plus
+    it's quite a bit faster when writing the values to the database,
+    at least with sqlite. The packed value is encoded as JSON and
+    optionally compressed.
     """
     __tablename__ = 'vector'
     id = Column(Integer, primary_key=True)
@@ -120,16 +126,31 @@ class Vector(Base):
 
     @staticmethod
     def count_vectors_for_model(session, model):
+        """
+        Count the vectors in the database that belong to the specified
+        model. Returns the count.
+        """
         return list(
             session.query(func.count(Vector.id)).filter(Vector.model_id ==
                                                         model.id))[0][0]
 
     @staticmethod
     def vectors_for_model(session, model):
+        """
+        Query for vectors belonging to the specified model. Returns
+        the query object, which can be iterated over to get the
+        vectors, or further constrained.
+        """
         return session.query(Vector).filter(Vector.model_id == model.id)
 
     @staticmethod
     def count_vectors_for_word(session, word, model=None):
+        """
+        Count vectors matching an single word and optionally
+        belonging to the specified model. Returns the query object,
+        which can be iterated over to get the vectors, or further
+        constrained.
+        """
         q = session.query(func.count(Vector.id))
 
         if model:
@@ -139,6 +160,12 @@ class Vector(Base):
 
     @staticmethod
     def vectors_for_word(session, word, model=None):
+        """
+        Query for vectors matching an single word and optionally
+        belonging to the specified model. Returns the query object,
+        which can be iterated over to get the vectors, or further
+        constrained.
+        """
         q = session.query(Vector)
 
         if model:
@@ -148,6 +175,12 @@ class Vector(Base):
 
     @staticmethod
     def count_vectors_for_words(session, words, model=None):
+        """
+        Count vectors matching any of the specfied words and optionally
+        belonging to the specified model. Returns the query object,
+        which can be iterated over to get the vectors, or further
+        constrained.
+        """
         q = session.query(func.count(Vector.id))
 
         if model:
@@ -157,6 +190,12 @@ class Vector(Base):
 
     @staticmethod
     def vectors_for_words(session, words, model=None):
+        """
+        Query for vectors matching any of the specified words and optionally
+        belonging to the specified model. Returns the query object,
+        which can be iterated over to get the vectors, or further
+        constrained.
+        """
         q = session.query(Vector)
 
         if model:
@@ -204,15 +243,22 @@ class Vector(Base):
 
         return x
 
-    def to_dict(self, include_model=False):
+    def to_dict(self, include_model=False, include_model_id=False):
+        """
+        Converts the vector to a dict, suitable for encoding to
+        JSON. The Model values are under the key 'values'.
+        """
         x = {'id': self.id, 'word': self.word, 'values': self.unpack_values()}
 
         if include_model:
             x['model'] = self.model.to_dict()
-        else:
+        elif include_model_id:
             x['modelId'] = self.model_id
 
         return x
 
     def to_list(self):
+        """
+        Converts the vector to a list, suitable for encoding as a CSV row.
+        """
         return [self.model_id, self.id, self.word] + self.unpack_values()

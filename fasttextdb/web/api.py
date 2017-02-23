@@ -41,7 +41,7 @@ class Line(object):
         return self._line
 
 
-def iter_csv(data):
+def _iter_csv(data):
     line = Line()
     writer = csv.writer(line)
     for csv_line in data:
@@ -112,16 +112,20 @@ def count_models():
     return jsonify(count=Model.count_models(request.session))
 
 
-@app.route('/api/model/<int:id>/vectors/words/count', methods=['GET'])
+@app.route('/api/model/<int:id>/vectors/words/count', methods=['GET', 'POST'])
 @api_auth
-def count_vectors_for_words(id):
+def api_count_vectors_for_words(id):
     model = request.session.query(Model).get(id)
 
     if not model:
         raise NotFoundException('Model with ID %s was not found' % id)
 
-    count = Vector.count_vectors_for_words(request.session, request.words,
-                                           model)
+    if request.method == 'POST':
+        words = request.json
+    else:
+        words = request.words
+
+    count = Vector.count_vectors_for_words(request.session, words, model)
     return jsonify(count=count)
 
 
@@ -130,7 +134,7 @@ def _vectors_response(vectors, template, method, **kwargs):
 
     if at == 'csv':
         return Response(
-            iter_csv([v.to_list() for v in vectors]), mimetype='text/csv')
+            _iter_csv([v.to_list() for v in vectors]), mimetype='text/csv')
 
     return jsonify([v.to_dict() for v in vectors])
 
@@ -221,6 +225,11 @@ def api_vectors_for_words_list(id):
 
     if not model:
         raise NotFoundException('Model with ID %s was not found' % id)
+
+    if request.method == 'POST':
+        words = request.json
+    else:
+        words = request.words
 
     vectors = Vector.vectors_for_words(request.session, words,
                                        model).order_by(asc(Vector.word))

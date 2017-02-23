@@ -2,7 +2,7 @@ from contextlib import contextmanager
 
 from sqlalchemy.orm import sessionmaker
 
-from .files import model_file, read_file
+from .files import model_file, read_model_file
 from .models import *
 
 __all__ = ['commit_file', 'commit_vectors', 'model_from_file']
@@ -36,7 +36,7 @@ def commit_file(file_,
     with model_from_file(file_, **model_info) as (m, file1):
         for vector in commit_vectors(
                 vectors(
-                    read_file(file1),
+                    read_model_file(file1),
                     model or m,
                     encoding=encoding,
                     compression=compression),
@@ -93,7 +93,7 @@ def vectors(source,
             compression=BZ2_COMPRESSION):
     """
     Given a model and a source of (word, values) tuples (see
-    modeldb.files.read_file), this will generate Vectors for storage
+    modeldb.files.read_model_file), this will generate Vectors for storage
     to a database.
     """
     for (word, vector) in source:
