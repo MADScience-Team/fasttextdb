@@ -1,16 +1,19 @@
 import json
 import bz2
 import zlib
+import base64
 
 from sqlalchemy import Column, Integer, String, Float, UniqueConstraint
 from sqlalchemy import Unicode, Text, ForeignKey, LargeBinary
-from sqlalchemy import SmallInteger
+from sqlalchemy import SmallInteger, or_
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
 from sqlalchemy import func
 
 from flask_login import UserMixin
+
+from .util import under_to_camel
 
 __all__ = [
     'User', 'Base', 'Model', 'Vector', 'NO_COMPRESSION', 'ZLIB_COMPRESSION',
@@ -81,30 +84,45 @@ class Model(Base):
     def count_models(session):
         return list(session.query(func.count(Model.id)))[0][0]
 
-    def to_dict(self):
-        return {
+    @staticmethod
+    def from_dict(data):
+        return Model(**data)
+
+    def to_dict(self, camel=False):
+        d = {
             'id': self.id,
             'owner': self.owner,
             'name': self.name,
             'description': self.description,
             'dim': self.dim,
-            'inputFile': self.input_file,
-            'outputFile': self.output_file,
-            'learningRate': self.learning_rate,
-            'learningRateUpdateRateChange':
+            'input_file': self.input_file,
+            'output_file': self.output_file,
+            'learning_rate': self.learning_rate,
+            'learning_rate_update_rate_change':
             self.learning_rate_update_rate_change,
-            'windowSize': self.window_size,
+            'window_size': self.window_size,
             'epoch': self.epoch,
-            'minCount': self.min_count,
-            'negativesSampled': self.negatives_sampled,
-            'wordNgrams': self.word_ngrams,
-            'lossFunction': self.loss_function,
-            'numBuckets': self.num_buckets,
-            'minNgramLen': self.min_ngram_len,
-            'maxNgramLen': self.max_ngram_len,
-            'numThreads': self.num_threads,
-            'samplingThreshold': self.sampling_threshold
+            'min_count': self.min_count,
+            'negatives_sampled': self.negatives_sampled,
+            'word_ngrams': self.word_ngrams,
+            'loss_function': self.loss_function,
+            'num_buckets': self.num_buckets,
+            'min_ngram_len': self.min_ngram_len,
+            'max_ngram_len': self.max_ngram_len,
+            'num_threads': self.num_threads,
+            'sampling_threshold': self.sampling_threshold
         }
+
+        if camel:
+            d2 = {}
+
+            for k in d:
+                k2 = under_to_camel(k)
+                d2[k2] = d[k]
+
+            d = d2
+
+        return d
 
 
 class Vector(Base):
@@ -189,7 +207,8 @@ class Vector(Base):
         if model:
             q = q.filter(Vector.model_id == model.id)
 
-        return list(q.filter(Vector.word.in_(words)))[0][0]
+        return list(
+            q.filter(or_(* [Vector.word.like(w) for w in words])))[0][0]
 
     @staticmethod
     def vectors_for_words(session, words, model=None):
@@ -204,12 +223,31 @@ class Vector(Base):
         if model:
             q = q.filter(Vector.model_id == model.id)
 
-        return q.filter(Vector.word.in_(words))
+        return q.filter(or_(* [Vector.word.like(w) for w in words]))
 
-    def pack_values(self,
-                    values,
-                    encoding=JSON_ENCODING,
-                    compression=BZ2_COMPRESSION):
+    @staticmethod
+    def from_dict(data):
+        v = Vector(
+            word=data['word'],
+            encoding_compression=data['encoding_compression'])
+
+        if 'packed_values' in data:
+            v.packed_values = base64.b64decode(data['packed_values'])
+        elif 'values' in data:
+            v.values = data['values']
+            v.pack_values(data['values'])
+
+        if 'model_id' in data:
+            v.model_id = data['model_id']
+            v.model = Model(id=data['model_id'])
+        elif 'model' in data:
+            m = Model.from_dict(data['model'])
+            v.model_id = m.id
+            v.model = m
+
+        return v
+
+    def pack_values(self, values, encoding=None, compression=None):
         """
         Given a list of floats, this method will encode them as JSON
         and optionally compress them into the packed_values column for
@@ -217,6 +255,9 @@ class Vector(Base):
         """
         x = values
         x = json.dumps(x)
+
+        if not compression:
+            compression = self.encoding_compression & COMPRESSION_MASK
 
         if (compression & COMPRESSION_MASK) == BZ2_COMPRESSION:
             x = bz2.compress(str.encode(x))
@@ -239,24 +280,43 @@ class Vector(Base):
               COMPRESSION_MASK) == ZLIB_COMPRESSION:
             x = zlib.decompress(x)
 
-        if (self.encoding_compression & ENCODING_MASK) == MSGPACK_ENCODING:
-            x = msgpack.loads(x)
-        else:
-            x = json.loads(x)
+        x = json.loads(x)
 
         return x
 
-    def to_dict(self, include_model=False, include_model_id=False):
+    def to_dict(self,
+                camel=False,
+                include_model=False,
+                include_model_id=False,
+                packed=False):
         """
         Converts the vector to a dict, suitable for encoding to
         JSON. The Model values are under the key 'values'.
         """
-        x = {'id': self.id, 'word': self.word, 'values': self.unpack_values()}
+        x = {
+            'id': self.id,
+            'word': self.word,
+            'encoding_compression': self.encoding_compression
+        }
+
+        if packed:
+            x['packed_values'] = base64.b64encode(self.packed_values).decode()
+        else:
+            x['values'] = self.unpack_values()
 
         if include_model:
             x['model'] = self.model.to_dict()
         elif include_model_id:
-            x['modelId'] = self.model_id
+            x['model_id'] = self.model_id
+
+        if camel:
+            x2 = {}
+
+            for k in x:
+                k2 = under_to_camel(k)
+                x2[k2] = x[k]
+
+            x = x2
 
         return x
 

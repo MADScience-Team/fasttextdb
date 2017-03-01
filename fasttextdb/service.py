@@ -84,7 +84,7 @@ def _to_model(model):
     elif isinstance(model, dict):
         return Model(**model)
     elif not model:
-        return Model()
+        return None
     else:
         return model
 
@@ -223,6 +223,81 @@ class FasttextDb(object):
         else:
             raise Exception('must specify either model name or ID')
 
+    def _eq_or_range(self, type_, col, param, q):
+        if type(param) == type_:
+            return q.filter(col == param)
+        else:
+            try:
+                if len(param) > 1:
+                    if len(param) == 2:
+                        return q.filter(col.between(*param))
+                    else:
+                        return q.filter(col == param[0])
+            except:
+                # Guess this wasn't an iterable?
+                return q
+
+    def _like(self, col, param, q):
+        if param:
+            return q.filter(col.like(param))
+        else:
+            return q
+
+    def find_models(self,
+                    owner=None,
+                    name=None,
+                    description=None,
+                    num_words=None,
+                    dim=None,
+                    input_file=None,
+                    output_file=None,
+                    learning_rate=None,
+                    learning_rate_update_rate_change=None,
+                    window_size=None,
+                    epoch=None,
+                    min_count=None,
+                    negatives_sampled=None,
+                    word_ngrams=None,
+                    loss_function=None,
+                    num_buckets=None,
+                    min_ngram_len=None,
+                    max_ngram_len=None,
+                    num_threads=None,
+                    sampling_threshold=None,
+                    session=None):
+
+        if not session:
+            session = self.open()
+
+        q = session.query(Model)
+        q = self._like(Model.owner, owner, q)
+        q = self._like(Model.name, name, q)
+        q = self._like(Model.description, description, q)
+        q = self._eq_or_range(int, Model.num_words, num_words, q)
+        q = self._eq_or_range(int, Model.dim, dim, q)
+        q = self._like(Model.input_file, input_file, q)
+        q = self._like(Model.output_file, output_file, q)
+        q = self._eq_or_range(float, Model.learning_rate, learning_rate, q)
+        q = self._eq_or_range(int, Model.learning_rate_update_rate_change,
+                              learning_rate_update_rate_change, q)
+        q = self._eq_or_range(int, Model.window_size, window_size, q)
+        q = self._eq_or_range(int, Model.epoch, epoch, q)
+        q = self._eq_or_range(int, Model.min_count, min_count, q)
+        q = self._eq_or_range(int, Model.negatives_sampled, negatives_sampled,
+                              q)
+        q = self._eq_or_range(int, Model.word_ngrams, word_ngrams, q)
+
+        q = self._like(Model.loss_function, loss_function, q)
+
+        q = self._eq_or_range(int, Model.num_buckets, num_buckets, q)
+        q = self._eq_or_range(int, Model.min_ngram_len, min_ngram_len, q)
+        q = self._eq_or_range(int, Model.max_ngram_len, max_ngram_len, q)
+        q = self._eq_or_range(int, Model.num_threads, num_threads, q)
+        q = self._eq_or_range(float, Model.sampling_threshold,
+                              sampling_threshold, q)
+
+        return q
+
     def update_model(self,
                      model,
                      owner=None,
@@ -313,11 +388,7 @@ class FasttextDb(object):
 
         model = _to_model(model)
         model = self.get_model(model)
-
-        return [
-            v.to_dict()
-            for v in Vector.vectors_for_words(session, words, model)
-        ]
+        return Vector.vectors_for_words(session, words, model=model)
 
 
 class FasttextApi(object):

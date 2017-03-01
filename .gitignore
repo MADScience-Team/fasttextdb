@@ -3,5 +3,6 @@
 *.yml
 *.db
 scratch
-venv
+venv*
 node_modules
+*.out
