@@ -134,6 +134,10 @@ def prepare_request():
         'page_size': get_param('page_size', 25, int)
     }
 
+    request.camel = get_param('camel', False, bool)
+    request.packed = get_param('camel', False, bool)
+    request.include_model = get_param('include_model', False, bool)
+    request.include_model_id = get_param('include_model_id', False, bool)
     request.words = get_param_list('word')
 
 

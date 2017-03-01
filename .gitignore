@@ -6,3 +6,4 @@ scratch
 venv*
 node_modules
 *.out
+.markdown-preview.html
