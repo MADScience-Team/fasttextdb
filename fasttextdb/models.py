@@ -2,7 +2,7 @@ import json
 import bz2
 import zlib
 
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String, Float, UniqueConstraint
 from sqlalchemy import Unicode, Text, ForeignKey, LargeBinary
 from sqlalchemy import SmallInteger
 from sqlalchemy.ext.declarative import declarative_base
@@ -118,11 +118,14 @@ class Vector(Base):
     """
     __tablename__ = 'vector'
     id = Column(Integer, primary_key=True)
-    word = Column(Unicode, unique=True)
+    word = Column(Unicode)
     packed_values = Column(LargeBinary)
     model_id = Column(Integer, ForeignKey('model.id'), index=True)
     model = relationship("Model")
     encoding_compression = Column(SmallInteger)
+
+    __table_args__ = (UniqueConstraint(
+        'model_id', 'word', name='uk_model_word'), )
 
     @staticmethod
     def count_vectors_for_model(session, model):

@@ -1,0 +1,7 @@
+#!/usr/bin/python
+
+from fasttextdb import get_parser
+
+parser = get_parser('access and manipulate FastTextDB instances')
+args = parser.parse_args()
+args.func(args)

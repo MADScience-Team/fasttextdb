@@ -1,6 +1,7 @@
 import yaml
 import os
 import sqlalchemy
+import logging.config
 
 from importlib import import_module
 from copy import deepcopy
@@ -9,8 +10,7 @@ from copy import deepcopy
 from .models import *
 
 __all__ = [
-    "CONFIG_SEARCH_PATH", "CONFIG_DEFAULTS", "ConfigException", "get_engine",
-    "load_config"
+    "CONFIG_SEARCH_PATH", "CONFIG_DEFAULTS", "ConfigException", "load_config"
 ]
 
 CONFIG_SEARCH_PATH = [
@@ -24,17 +24,16 @@ if 'FASTTEXTDB_CONFIG' in os.environ:
     CONFIG_SEARCH_PATH = [os.environ['FASTTEXTDB_CONFIG']] + CONFIG_SEARCH_PATH
 
 CONFIG_DEFAULTS = {
-    'db': {
-        'url': 'sqlite:///fasttext.db',
-        'echo': False
-    },
+    'url': 'sqlite:///fasttext.db',
+    'progress': False,
     'vectors': {
         'encoding': 'json',
         'compression': 'bz2'
     },
-    'host': '127.0.0.1',
-    'port': 8888,
     'debug': False,
+    'logging': {
+        'version': 1
+    },
     'authentication': {
         'credentials': ('.authenticate.get_credentials', 'fasttextdb'),
         'verify': ('.authenticate.sha256_verify', 'fasttextdb'),
@@ -58,15 +57,6 @@ CONFIG_DEFAULTS = {
 
 class ConfigException(Exception):
     pass
-
-
-def get_engine(config):
-    """
-    Return an sqlalchemy.engine.Engine instance, based on the
-    configuration provided in the db key of the config dictionary
-    passed in.
-    """
-    return sqlalchemy.engine_from_config(config['db'], prefix='')
 
 
 def _merge_dict(target, *sources):
@@ -159,7 +149,9 @@ def load_config(path=None, file_=None, args=None):
     if args:
         configs.append(_config_from_args(args))
 
-    return _resolve_config_items(_merge_dict(cdef, *configs))
+    cfg = _resolve_config_items(_merge_dict(cdef, *configs))
+    logging.config.dictConfig(cfg['logging'])
+    return cfg
 
 
 def _config_from_args(args):
@@ -167,15 +159,11 @@ def _config_from_args(args):
 
     if args.secret:
         c['secret'] = args.secret
-    if args.host:
-        c['host'] = args.host
-    if args.port:
-        c['port'] = args.port
+    if args.url:
+        c['url'] = args.url
     if args.debug:
         c['debug'] = args.debug
-    if args.username:
-        c['username'] = args.username
-    if args.password:
-        c['password'] = args.password
+    if args.progress:
+        c['progress'] = args.progress
 
     return c
