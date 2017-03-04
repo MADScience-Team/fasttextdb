@@ -257,7 +257,16 @@ class Vector(Base):
         x = json.dumps(x)
 
         if not compression:
-            compression = self.encoding_compression & COMPRESSION_MASK
+            if not self.encoding_compression:
+                compression = BZ2_COMPRESSION
+            else:
+                compression = self.encoding_compression & COMPRESSION_MASK
+
+        if not encoding:
+            if not self.encoding_compression:
+                encoding = JSON_ENCODING
+            else:
+                encoding = self.encoding_compression & ENCODING_MASK
 
         if (compression & COMPRESSION_MASK) == BZ2_COMPRESSION:
             x = bz2.compress(str.encode(x))

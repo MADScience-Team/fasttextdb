@@ -22,6 +22,17 @@ def under_to_camel(under):
     return ''.join(x.capitalize() or '_' for x in spl)
 
 
+def int_or_str(s):
+    if s.isdigit():
+        return int(s)
+    else:
+        return s
+
+
+def ints_or_strs(*values):
+    return [int_or_str(v) for v in values]
+
+
 def get_requested_type():
     best = request.accept_mimetypes.best_match(
         ['application/json', 'text/html', 'text/csv'])

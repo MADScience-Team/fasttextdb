@@ -36,7 +36,7 @@ from ..authenticate import *
 __all__ = ['app', 'run_app']
 
 config = load_config()
-engine = get_engine(config)
+engine = create_engine(config['url'])
 Session = sessionmaker(bind=engine)
 
 app = Flask(__name__)
@@ -70,6 +70,7 @@ def page_request(query):
 def get_param(param, default=None, type_=None):
     camel = under_to_camel(param)
     search = [param, camel, camel.lower(), camel.upper(), param.upper]
+
     for s in search:
         if s in request.args:
             return request.args.get(s, default, type_)
@@ -139,6 +140,7 @@ def prepare_request():
     request.include_model = get_param('include_model', False, bool)
     request.include_model_id = get_param('include_model_id', False, bool)
     request.words = get_param_list('word')
+    request.model = list(ints_or_strs(get_param_list('model')))
 
 
 @app.after_request

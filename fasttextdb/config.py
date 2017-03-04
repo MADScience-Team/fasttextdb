@@ -2,6 +2,7 @@ import yaml
 import os
 import sqlalchemy
 import logging.config
+import secrets
 
 from importlib import import_module
 from copy import deepcopy
@@ -17,6 +18,7 @@ CONFIG_SEARCH_PATH = [
     os.path.join(os.getcwd(), "fasttextdb.yml"),
     os.path.join(os.getcwd(), "config.yml"),
     os.path.join(os.path.expanduser('~'), ".fasttextdb.yml"),
+    os.path.join(os.path.abspath(os.sep), "etc", "fasttextdb.yml"),
     os.path.join(os.path.abspath(os.sep), "etc", "fasttextdb", "config.yml")
 ]
 
@@ -30,6 +32,7 @@ CONFIG_DEFAULTS = {
         'encoding': 'json',
         'compression': 'bz2'
     },
+    'secret': secrets.token_hex(nbytes=16),
     'debug': False,
     'logging': {
         'version': 1
@@ -145,6 +148,7 @@ def load_config(path=None, file_=None, args=None):
 
     if file_:
         configs.append(yaml.load(file_))
+        file_.close()
 
     if args:
         configs.append(_config_from_args(args))

@@ -8,6 +8,7 @@ from sqlalchemy import create_engine
 from .config import load_config
 from .models import Base
 from .service import *
+from .urlhandler import *
 
 
 def get_parser(description):
@@ -205,13 +206,14 @@ def initialize_subcommand(args):
     logger = logging.getLogger('fasttextdb.initialize')
     logger.info('initializing database')
     Base.metadata.create_all(engine)
+    logger.info('initialization complete')
 
 
 def file_subcommand(args):
     config = load_config(args=args)
     logger = logging.getLogger('fasttextdb.file')
     logger.info('connecting to database')
-    with fasttextdb(config['url'], config) as ftdb:
+    with fasttextdb(config['url'], config=config) as ftdb:
         ftdb.commit_file(args.model, args.input, config['progress'])
 
 
@@ -220,7 +222,7 @@ def update_model(args):
     logger = logging.getLogger('fasttextdb.model')
     logger.info('connecting to database')
 
-    with fasttextdb(config['url'], config) as ftdb:
+    with fasttextdb(config['url'], config=config) as ftdb:
         model = ftdb.update_model(
             args.model,
             owner=args.owner,
@@ -256,7 +258,7 @@ def find_model(args):
     logger = logging.getLogger('fasttextdb.model')
     logger.info('connecting to database %s' % config['url'])
 
-    with fasttextdb(config['url'], config) as ftdb:
+    with fasttextdb(config['url'], config=config) as ftdb:
         models = ftdb.find_models(
             owner=args.owner,
             name=args.name,
