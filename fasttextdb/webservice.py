@@ -109,44 +109,6 @@ class WebService(object):
             auth=FasttextAuth(self.username, self.password, self.config),
             **kwargs)
 
-    @inject_model
-    def create_vectors(self, model, vectors):
-        model = _to_model(model)
-
-        if model.id:
-            url = 'model/%s/vectors' % model.id
-        elif model.name:
-            url = 'model/name/%s/vectors' % model.name
-        else:
-            raise Exception('must specify either model ID or name')
-
-        return self.post(url, json=[v.to_dict() for v in vectors])
-
-    @from_dict(Model)
-    def find_models(self,
-                    owner=None,
-                    name=None,
-                    description=None,
-                    num_words=None,
-                    dim=None,
-                    input_file=None,
-                    output_file=None,
-                    learning_rate=None,
-                    learning_rate_update_rate_change=None,
-                    window_size=None,
-                    epoch=None,
-                    min_count=None,
-                    negatives_sampled=None,
-                    word_ngrams=None,
-                    loss_function=None,
-                    num_buckets=None,
-                    min_ngram_len=None,
-                    max_ngram_len=None,
-                    num_threads=None,
-                    sampling_threshold=None,
-                    session=None):
-        raise Exception('not yet implemented')
-
     @inject_model(resolve=False)
     def model_exists(self, model, session=None):
         raise Exception('not yet implemented')
@@ -160,6 +122,86 @@ class WebService(object):
             return self.get('model/name/%s' % model.name)
         else:
             raise Exception('must specify either model name or ID')
+
+    @from_dict(Model, multiple=False)
+    @inject_model(resolve=False)
+    def create_model(self, **kwargs):
+        return self.post('model', json=kwargs)
+
+    @inject_model
+    def create_vectors(self, model, vectors):
+        model = _to_model(model)
+
+        if model.id:
+            url = 'model/%s/vectors' % model.id
+        elif model.name:
+            url = 'model/name/%s/vectors' % model.name
+        else:
+            raise Exception('must specify either model ID or name')
+
+        return [
+            Vector(**vj)
+            for vj in self.post(url, json=[v.to_dict() for v in vectors])
+        ]
+
+    @from_dict(Model)
+    def find_models(self,
+                    owner=None,
+                    name=None,
+                    description=None,
+                    num_words=None,
+                    dim=None,
+                    input_file=None,
+                    output=None,
+                    lr=None,
+                    lr_update_rate=None,
+                    ws=None,
+                    epoch=None,
+                    min_count=None,
+                    neg=None,
+                    word_ngrams=None,
+                    loss=None,
+                    bucket=None,
+                    minn=None,
+                    maxn=None,
+                    thread=None,
+                    t=None,
+                    session=None):
+        raise Exception('not yet implemented')
+
+    @inject_model(True)
+    def update_model(self,
+                     model,
+                     owner=None,
+                     name=None,
+                     description=None,
+                     num_words=None,
+                     dim=None,
+                     input_file=None,
+                     output=None,
+                     lr=None,
+                     lr_update_rate=None,
+                     ws=None,
+                     epoch=None,
+                     min_count=None,
+                     neg=None,
+                     word_ngrams=None,
+                     loss=None,
+                     bucket=None,
+                     minn=None,
+                     maxn=None,
+                     thread=None,
+                     t=None):
+        raise Exception('not yet implemented')
+
+    @inject_model()
+    def count_vectors_for_model(self, model):
+        raise Exception('not yet implemented')
+
+    @from_dict(Vector)
+    @inject_model()
+    def get_vectors_for_model(self, model):
+        raise Exception('not yet implemented')
 
     @inject_model()
     def count_vectors_for_words(self, model, words):

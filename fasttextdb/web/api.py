@@ -49,84 +49,112 @@ def _iter_csv(data):
         yield line.read()
 
 
-@app.route("/api/model/create", methods=['POST'])
-@app.route("/api/model", methods=['POST'])
+@app.route("/api/model/<id_or_name>/vectors", methods=['POST'])
+def create_vectors(id_or_name):
+    if id_or_name.isdigit():
+        id_or_name = int(id_or_name)
+
+    if request.service.model_exists(id_or_name):
+        vectors = [Vector.from_dict(**v) for v in request.json]
+        vectors = request.service.create_vectors(id_or_name, vectors)
+        return jsonify([v.to_json() for v in vectors])
+    else:
+        raise NotFoundException('Could not find a model with ID %s' % id)
+
+
+@app.route("/api/model/<id_or_name>/exists", methods=['GET'])
 @api_auth
-def api_create_model():
-    model = Model(**request.json)
-    request.session.add(model)
-    request.session.commit()
-    return jsonify(model.to_dict()), 201
+def model_exists(id_or_name):
+    if id_or_name.isdigit():
+        id_or_name = int(id_or_name)
+
+    exists = request.service.model_exists(id_or_name)
+    return jsonify({'exists': exists})
 
 
-@app.route("/api/model/<int:id>", methods=['GET'])
+@app.route("/api/model/<id_or_name>", methods=['GET'])
 @api_auth
-def api_get_model(id):
-    model = request.session.query(Model).get(id)
+def get_model(id_or_name):
+    if id_or_name.isdigit():
+        id_or_name = int(id_or_name)
 
-    if model:
+    if request.service.model_exists(id_or_name):
+        model = request.service.get_model(id_or_name)
         return jsonify(model.to_dict())
     else:
         raise NotFoundException('Could not find a model with ID %s' % id)
 
 
-@app.route("/api/model/<int:id>", methods=['PUT'])
+@app.route("/api/model/create", methods=['POST'])
+@app.route("/api/model", methods=['POST'])
 @api_auth
-def api_update_model(id):
-    model = request.session.query(Model).get(id)
-
-    if not model:
-        raise NotFoundException('Could not find a model with ID %s' % id)
-
-    for k in request.json:
-        if k != 'id':
-            setattr(model, k, model_data[k])
-
-    request.session.commit()
-    return jsonify(model.to_dict())
+def create_model():
+    model = request.service.create_model(**request.json)
+    return jsonify(model.to_dict()), 201
 
 
-@app.route("/api/models")
-@app.route("/api/model", methods=['GET'])
+@app.route("/api/search/model", methods=['GET'])
 @api_auth
-def api_get_models():
-    models = request.session.query(Model)
-    models = page_request(models)
+def find_models():
+    models = request.service.find_models(**request.json)
     return jsonify([m.to_dict() for m in models])
 
 
-@app.route("/api/model/name/<name>")
+@app.route("/api/model/<id_or_name>", methods=['PUT'])
 @api_auth
-def api_get_model_by_name(name):
-    models = list(request.session.query(Model).filter(Model.name == name))
+def update_model(id_or_name):
+    if id_or_name.isdigit():
+        id_or_name = int(id_or_name)
 
-    if len(models) == 0:
-        raise NotFoundException('no model found with name %s' % name)
-
-    return jsonify(models[0].to_dict())
-
-
-@app.route("/api/models/count")
-@api_auth
-def count_models():
-    return jsonify(count=Model.count_models(request.session))
-
-
-@app.route('/api/model/<int:id>/vectors/words/count', methods=['GET', 'POST'])
-@api_auth
-def api_count_vectors_for_words(id):
-    model = request.session.query(Model).get(id)
-
-    if not model:
-        raise NotFoundException('Model with ID %s was not found' % id)
-
-    if request.method == 'POST':
-        words = request.json
+    if request.service.model_exists(id_or_name):
+        model = request.service.get_model(id_or_name)
+        model = request.service.update_model(id_or_name, **request.json)
+        return jsonify(model.to_dict())
     else:
-        words = request.words
+        raise NotFoundException('Could not find a model with ID %s' % id)
 
-    count = Vector.count_vectors_for_words(request.session, words, model)
-    return jsonify(count=count)
+
+@app.route("/api/model/vectors/count", methods=['GET', 'POST'])
+@api_auth
+def count_vectors_for_model(id_or_name):
+    if id_or_name.isdigit():
+        id_or_name = int(id_or_name)
+
+    if request.service.model_exists(id_or_name):
+        if request.method == 'POST':
+            words = request.json
+        else:
+            words = request.words
+
+        if words and len(words):
+            count = request.service.count_vectors_for_words(id_or_name, words)
+        else:
+            count = request.service.count_vectors_for_model(id_or_name)
+        return jsonify({'count': count})
+    else:
+        raise NotFoundException('Could not find a model with ID %s' % id)
+
+
+@app.route("/api/model/vectors", methods=['GET', 'POST'])
+@api_auth
+def get_vectors_for_model(id_or_name):
+    if id_or_name.isdigit():
+        id_or_name = int(id_or_name)
+
+    if request.service.model_exists(id_or_name):
+        if request.method == 'POST':
+            words = request.json
+        else:
+            words = request.words
+
+        if words and len(words):
+            vectors = request.service.get_vectors_for_words(id_or_name, words)
+        else:
+            vectors = request.service.get_vectors_for_model(id_or_name)
+
+        return jsonify([v.to_json() for v in vectors])
+    else:
+        raise NotFoundException('Could not find a model with ID %s' % id)
 
 
 def _vectors_response(vectors, template, method, **kwargs):
@@ -139,102 +167,11 @@ def _vectors_response(vectors, template, method, **kwargs):
     return jsonify([v.to_dict() for v in vectors])
 
 
-@app.route('/api/model/<int:id>/vectors', methods=['GET'])
-@api_auth
-def api_vectors_for_model(id):
-    model = request.session.query(Model).get(id)
-
-    if not model:
-        raise NotFoundException('Model with ID %s was not found' % id)
-
-    vectors = Vector.vectors_for_model(request.session,
-                                       model).order_by(asc(Vector.word))
-    vectors = page_request(vectors)
-
-    return vectors_response(
-        template='vectors.html',
-        method='vectors_for_model',
-        model=model,
-        vectors=vectors)
-
-
-@app.route('/api/model/<int:id>/vectors/count')
-@api_auth
-def api_count_vectors_for_model(id):
-    model = request.session.query(Model).get(id)
-
-    if not model:
-        raise NotFoundException('Model with ID %s was not found' % id)
-
-    count = Vector.count_vectors_for_model(request.session, model)
-    return jsonify(count=count)
-
-
 def _vectors_from_json(model, json):
     for vector in json:
         v = Vector(word=vector['word'], model=model)
         v.pack_values(vector['values'])
         yield v
-
-
-@app.route('/api/model/<int:id>/vectors', methods=['POST'])
-@api_auth
-def api_create_vectors_for_model_id(id):
-    model = request.session.query(Model).get(id)
-
-    if not model:
-        raise NotFoundException('Model with ID %s was not found' % id)
-
-    vectors = list(_vectors_from_json(model, request.json))
-    request.session.add_all(vectors)
-    return jsonify({'count': len(vectors)})
-
-
-@app.route('/api/model/name/<name>/vectors', methods=['POST'])
-@api_auth
-def api_create_vectors_for_model_name(name):
-    models = list(request.session.query(Model).filter(Model.name == name))
-
-    if len(models) == 0:
-        raise NotFoundException('Model with ID %s was not found' % id)
-
-    model = models[0]
-    vectors = list(_vectors_from_json(model, request.json))
-    request.session.add_all(vectors)
-    return jsonify({'count': len(vectors)})
-
-
-@app.route('/api/model/<int:id>/vectors/word/<word>')
-@api_auth
-def api_vectors_for_word(id, word):
-    model = request.session.query(Model).get(id)
-
-    if not model:
-        raise NotFoundException('Model with ID %s was not found' % id)
-
-    vectors = Vector.vectors_for_word(request.session, word,
-                                      model).order_by(asc(Vector.word))
-    vectors = page_request(vectors)
-    return jsonify([v.to_dict() for v in vectors])
-
-
-@app.route('/api/model/<int:id>/vectors/words', methods=['PUT', 'POST'])
-@api_auth
-def api_vectors_for_words_list(id):
-    model = request.session.query(Model).get(id)
-
-    if not model:
-        raise NotFoundException('Model with ID %s was not found' % id)
-
-    if request.method == 'POST':
-        words = request.json
-    else:
-        words = request.words
-
-    vectors = Vector.vectors_for_words(request.session, words,
-                                       model).order_by(asc(Vector.word))
-    vectors = page_request(vectors)
-    return jsonify([v.to_dict() for v in vectors])
 
 
 @app.route('/api/model/<int:id>/upload/vectors', methods=['POST'])

@@ -26,12 +26,12 @@ def inject_model(resolve=True):
 
             if type(model) == int:
                 if resolve and service.model_exists(model):
-                    model = service.get_model()
+                    model = service.get_model(model)
                 else:
                     model = Model(id=model)
             elif type(model) == str:
                 if resolve and service.model_exists(model):
-                    model = service.get_model()
+                    model = service.get_model(model)
                 else:
                     model = Model(name=model)
             elif type(model) is not Model:
@@ -90,6 +90,107 @@ class FasttextService(object):
     def close(self):
         self.logger.info('closing connection: %s' % self.url)
 
+    def create_vectors(self, model, vectors):
+        raise Exception('requires subclass implementation')
+
+    def model_exists(self, model):
+        raise Exception('requires subclass implementation')
+
+    def get_model(self, model):
+        raise Exception('requires subclass implementation')
+
+    def create_model(self, **kwargs):
+        raise Exception('requires subclass implementation')
+
+    def find_models(self,
+                    owner=None,
+                    name=None,
+                    description=None,
+                    num_words=None,
+                    dim=None,
+                    input_file=None,
+                    output=None,
+                    lr=None,
+                    lr_update_rate=None,
+                    ws=None,
+                    epoch=None,
+                    min_count=None,
+                    neg=None,
+                    word_ngrams=None,
+                    loss=None,
+                    bucket=None,
+                    minn=None,
+                    maxn=None,
+                    thread=None,
+                    t=None,
+                    session=None):
+        raise Exception('requires subclass implementation')
+
+    def update_model(self,
+                     model,
+                     owner=None,
+                     name=None,
+                     description=None,
+                     num_words=None,
+                     dim=None,
+                     input_file=None,
+                     output=None,
+                     lr=None,
+                     lr_update_rate=None,
+                     ws=None,
+                     epoch=None,
+                     min_count=None,
+                     neg=None,
+                     word_ngrams=None,
+                     loss=None,
+                     bucket=None,
+                     minn=None,
+                     maxn=None,
+                     thread=None,
+                     t=None):
+        if owner:
+            model.owner = owner
+        if name:
+            model.name = name
+        if description:
+            model.description = description
+        if num_words:
+            model.num_words = num_words
+        if dim:
+            model.dim = dim
+        if input_file:
+            model.input_file = input_file
+        if output:
+            model.output = output
+        if lr:
+            model.lr = lr
+        if lr_update_rate:
+            model.lr_update_rate = lr_update_rate
+        if ws:
+            model.ws = ws
+        if epoch:
+            model.epoch = epoch
+        if min_count:
+            model.min_count = min_count
+        if neg:
+            model.neg = neg
+        if word_ngrams:
+            model.word_ngrams = word_ngrams
+        if loss:
+            model.loss = loss
+        if bucket:
+            model.bucket = bucket
+        if minn:
+            model.minn = minn
+        if maxn:
+            model.maxn = maxn
+        if thread:
+            model.thread = thread
+        if t:
+            model.t = t
+
+        return model
+
     @inject_model(True)
     def commit_file(self, model, file, progress=False):
         self.logger.info('storing vectors from %s for model %s' %
@@ -130,3 +231,15 @@ class FasttextService(object):
                     batch = []
 
         self.logger.info('%s vectors stored' % cnt)
+
+    def count_vectors_for_model(self, model):
+        raise Exception('requires subclass implementation')
+
+    def get_vectors_for_model(self, model):
+        raise Exception('requires subclass implementation')
+
+    def count_vectors_for_words(self, model, words):
+        raise Exception('requires subclass implementation')
+
+    def get_vectors_for_words(self, model, words):
+        raise Exception('requires subclass implementation')

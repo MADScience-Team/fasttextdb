@@ -17,6 +17,7 @@ class DbService(FasttextService):
         self.engine = engine
         self.Session = Session
         self.session = session
+        self.auto_commit = True
 
     def open(self):
         super().open()
@@ -37,13 +38,17 @@ class DbService(FasttextService):
         if self.session:
             self.session.close()
 
+    def _commit(self):
+        if self.auto_commit:
+            self.session.commit()
+
     @inject_model(True)
     def create_vectors(self, model, vectors):
         for vector in vectors:
             vector.model = model
             self.session.add(vector)
 
-        self.session.commit()
+        self._commit()
         self.logger.info('created %s vectors for model %s' %
                          (len(vectors), model.name))
         return vectors
@@ -74,6 +79,12 @@ class DbService(FasttextService):
         else:
             return None
 
+    def create_model(self, **kwargs):
+        model = Model(**kwargs)
+        self.session.add(model)
+        self._commit()
+        return model
+
     def _eq_or_range(self, type_, col, param, q):
         if type(param) == type_:
             return q.filter(col == param)
@@ -101,20 +112,20 @@ class DbService(FasttextService):
                     num_words=None,
                     dim=None,
                     input_file=None,
-                    output_file=None,
-                    learning_rate=None,
-                    learning_rate_update_rate_change=None,
-                    window_size=None,
+                    output=None,
+                    lr=None,
+                    lr_update_rate=None,
+                    ws=None,
                     epoch=None,
                     min_count=None,
-                    negatives_sampled=None,
+                    neg=None,
                     word_ngrams=None,
-                    loss_function=None,
-                    num_buckets=None,
-                    min_ngram_len=None,
-                    max_ngram_len=None,
-                    num_threads=None,
-                    sampling_threshold=None,
+                    loss=None,
+                    bucket=None,
+                    minn=None,
+                    maxn=None,
+                    thread=None,
+                    t=None,
                     session=None):
 
         if not session:
@@ -127,25 +138,22 @@ class DbService(FasttextService):
         q = self._eq_or_range(int, Model.num_words, num_words, q)
         q = self._eq_or_range(int, Model.dim, dim, q)
         q = self._like(Model.input_file, input_file, q)
-        q = self._like(Model.output_file, output_file, q)
-        q = self._eq_or_range(float, Model.learning_rate, learning_rate, q)
-        q = self._eq_or_range(int, Model.learning_rate_update_rate_change,
-                              learning_rate_update_rate_change, q)
-        q = self._eq_or_range(int, Model.window_size, window_size, q)
+        q = self._like(Model.output, output, q)
+        q = self._eq_or_range(float, Model.lr, lr, q)
+        q = self._eq_or_range(int, Model.lr_update_rate, lr_update_rate, q)
+        q = self._eq_or_range(int, Model.ws, ws, q)
         q = self._eq_or_range(int, Model.epoch, epoch, q)
         q = self._eq_or_range(int, Model.min_count, min_count, q)
-        q = self._eq_or_range(int, Model.negatives_sampled, negatives_sampled,
-                              q)
+        q = self._eq_or_range(int, Model.neg, neg, q)
         q = self._eq_or_range(int, Model.word_ngrams, word_ngrams, q)
 
-        q = self._like(Model.loss_function, loss_function, q)
+        q = self._like(Model.loss, loss, q)
 
-        q = self._eq_or_range(int, Model.num_buckets, num_buckets, q)
-        q = self._eq_or_range(int, Model.min_ngram_len, min_ngram_len, q)
-        q = self._eq_or_range(int, Model.max_ngram_len, max_ngram_len, q)
-        q = self._eq_or_range(int, Model.num_threads, num_threads, q)
-        q = self._eq_or_range(float, Model.sampling_threshold,
-                              sampling_threshold, q)
+        q = self._eq_or_range(int, Model.bucket, bucket, q)
+        q = self._eq_or_range(int, Model.minn, minn, q)
+        q = self._eq_or_range(int, Model.maxn, maxn, q)
+        q = self._eq_or_range(int, Model.thread, thread, q)
+        q = self._eq_or_range(float, Model.t, t, q)
 
         return q
 
@@ -158,63 +166,45 @@ class DbService(FasttextService):
                      num_words=None,
                      dim=None,
                      input_file=None,
-                     output_file=None,
-                     learning_rate=None,
-                     learning_rate_update_rate_change=None,
-                     window_size=None,
+                     output=None,
+                     lr=None,
+                     lr_update_rate=None,
+                     ws=None,
                      epoch=None,
                      min_count=None,
-                     negatives_sampled=None,
+                     neg=None,
                      word_ngrams=None,
-                     loss_function=None,
-                     num_buckets=None,
-                     min_ngram_len=None,
-                     max_ngram_len=None,
-                     num_threads=None,
-                     sampling_threshold=None):
+                     loss=None,
+                     bucket=None,
+                     minn=None,
+                     maxn=None,
+                     thread=None,
+                     t=None):
 
-        if owner:
-            model.owner = owner
-        if name:
-            model.name = name
-        if description:
-            model.description = description
-        if num_words:
-            model.num_words = num_words
-        if dim:
-            model.dim = dim
-        if input_file:
-            model.input_file = input_file
-        if output_file:
-            model.output_file = output_file
-        if learning_rate:
-            model.learning_rate = learning_rate
-        if learning_rate_update_rate_change:
-            model.learning_rate_update_rate_change = learning_rate_update_rate_change
-        if window_size:
-            model.window_size = window_size
-        if epoch:
-            model.epoch = epoch
-        if min_count:
-            model.min_count = min_count
-        if negatives_sampled:
-            model.negatives_sampled = negatives_sampled
-        if word_ngrams:
-            model.word_ngrams = word_ngrams
-        if loss_function:
-            model.loss_function = loss_function
-        if num_buckets:
-            model.num_buckets = num_buckets
-        if min_ngram_len:
-            model.min_ngram_len = min_ngram_len
-        if max_ngram_len:
-            model.max_ngram_len = max_ngram_len
-        if num_threads:
-            model.num_threads = num_threads
-        if sampling_threshold:
-            model.sampling_threshold = sampling_threshold
+        model = super().update_model(
+            model,
+            owner=owner,
+            name=name,
+            description=description,
+            num_words=num_words,
+            dim=dim,
+            input_file=input_file,
+            output=output,
+            lr=lr,
+            lr_update_rate=lr_update_rate,
+            ws=ws,
+            epoch=epoch,
+            min_count=min_count,
+            neg=neg,
+            word_ngrams=word_ngrams,
+            loss=loss,
+            bucket=bucket,
+            minn=minn,
+            maxn=maxn,
+            thread=thread,
+            t=t)
 
-        self.session.commit()
+        self._commit()
         return model
 
     @inject_model()

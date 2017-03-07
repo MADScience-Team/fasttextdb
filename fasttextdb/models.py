@@ -65,20 +65,20 @@ class Model(Base):
     num_words = Column(Integer)
     dim = Column(Integer)
     input_file = Column(String)
-    output_file = Column(String)
-    learning_rate = Column(Float)
-    learning_rate_update_rate_change = Column(Integer)
-    window_size = Column(Integer)
+    output = Column(String)
+    lr = Column(Float)
+    lr_update_rate = Column(Integer)
+    ws = Column(Integer)
     epoch = Column(Integer)
     min_count = Column(Integer)
-    negatives_sampled = Column(Integer)
+    neg = Column(Integer)
     word_ngrams = Column(Integer)
-    loss_function = Column(String)
-    num_buckets = Column(Integer)
-    min_ngram_len = Column(Integer)
-    max_ngram_len = Column(Integer)
-    num_threads = Column(Integer)
-    sampling_threshold = Column(Float)
+    loss = Column(String)
+    bucket = Column(Integer)
+    minn = Column(Integer)
+    maxn = Column(Integer)
+    thread = Column(Integer)
+    t = Column(Float)
 
     @staticmethod
     def count_models(session):
@@ -96,21 +96,20 @@ class Model(Base):
             'description': self.description,
             'dim': self.dim,
             'input_file': self.input_file,
-            'output_file': self.output_file,
-            'learning_rate': self.learning_rate,
-            'learning_rate_update_rate_change':
-            self.learning_rate_update_rate_change,
-            'window_size': self.window_size,
+            'output': self.output,
+            'lr': self.lr,
+            'lr_update_rate': self.lr_update_rate,
+            'ws': self.ws,
             'epoch': self.epoch,
             'min_count': self.min_count,
-            'negatives_sampled': self.negatives_sampled,
+            'neg': self.neg,
             'word_ngrams': self.word_ngrams,
-            'loss_function': self.loss_function,
-            'num_buckets': self.num_buckets,
-            'min_ngram_len': self.min_ngram_len,
-            'max_ngram_len': self.max_ngram_len,
-            'num_threads': self.num_threads,
-            'sampling_threshold': self.sampling_threshold
+            'loss': self.loss,
+            'bucket': self.bucket,
+            'minn': self.minn,
+            'maxn': self.maxn,
+            'thread': self.thread,
+            't': self.t
         }
 
         if camel:

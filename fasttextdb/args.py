@@ -63,7 +63,7 @@ def get_parser(description):
         help="number of dimensions (size of vector, e.g 100)",
         type=int)
     update_parser.add_argument('--input-file', help="input file name")
-    update_parser.add_argument('--output-file', help="output file name")
+    update_parser.add_argument('--output', help="output file name")
     update_parser.add_argument(
         '--learning-rate', help="learning rate, e.g. 0.05", type=float)
     update_parser.add_argument(
@@ -71,29 +71,27 @@ def get_parser(description):
         help="change in learning rate, e.g. 100",
         type=int)
     update_parser.add_argument(
-        '--window-size', help="context window size, e.g. 5", type=int)
+        '--ws', help="context window size, e.g. 5", type=int)
     update_parser.add_argument(
         '--epoch', help="number of epochs, e.g. 5", type=int)
     update_parser.add_argument(
         '--min-count', help="min number of word occurrences, e.g. 5", type=int)
     update_parser.add_argument(
-        '--negatives', help="number of negatives sampled, e.g. 5", type=int)
+        '--neg', help="number of negatives sampled, e.g. 5", type=int)
     update_parser.add_argument(
         '--ngrams', help="max word ngram length, e.g. 1", type=int)
     update_parser.add_argument(
-        '--loss-function',
-        help="loss function",
-        choices=('ns', 'hs', 'softmax'))
+        '--loss', help="loss function", choices=('ns', 'hs', 'softmax'))
     update_parser.add_argument(
-        '--buckets', help="# buckets, e.g. 2000000", type=int)
+        '--bucket', help="# buckets, e.g. 2000000", type=int)
     update_parser.add_argument(
-        '--min-ngram', help="min character ngram length, e.g. 3", type=int)
+        '--minn', help="min character ngram length, e.g. 3", type=int)
     update_parser.add_argument(
-        '--max-ngram', help="max character ngram length, e.g. 6", type=int)
+        '--maxn', help="max character ngram length, e.g. 6", type=int)
     update_parser.add_argument(
-        '--threads', help="number of threads, e.g. 12", type=int)
+        '--thread', help="number of threads, e.g. 12", type=int)
     update_parser.add_argument(
-        '--threshold', help="sampling threshold, e.g. 0.0001", type=float)
+        '-t', help="sampling threshold, e.g. 0.0001", type=float)
 
     find_model_parser = subparsers.add_parser(
         'findmodels', help='find models matching specified parameters')
@@ -111,7 +109,7 @@ def get_parser(description):
         type=int,
         nargs='+')
     find_model_parser.add_argument('--input-file', help="input file name")
-    find_model_parser.add_argument('--output-file', help="output file name")
+    find_model_parser.add_argument('--output', help="output file name")
     find_model_parser.add_argument(
         '--learning-rate',
         help="learning rate, e.g. 0.05",
@@ -123,10 +121,7 @@ def get_parser(description):
         type=int,
         nargs='+')
     find_model_parser.add_argument(
-        '--window-size',
-        help="context window size, e.g. 5",
-        type=int,
-        nargs='+')
+        '--ws', help="context window size, e.g. 5", type=int, nargs='+')
     find_model_parser.add_argument(
         '--epoch', help="number of epochs, e.g. 5", type=int, nargs='+')
     find_model_parser.add_argument(
@@ -135,38 +130,35 @@ def get_parser(description):
         type=int,
         nargs='+')
     find_model_parser.add_argument(
-        '--negatives',
+        '--neg',
         help="number of negatives sampled, e.g. 5",
         type=int,
         nargs='+')
     find_model_parser.add_argument(
         '--ngrams', help="max word ngram length, e.g. 1", type=int, nargs='+')
     find_model_parser.add_argument(
-        '--loss-function',
+        '--loss',
         help="loss function",
         choices=('ns', 'hs', 'softmax'),
         nargs='+')
     find_model_parser.add_argument(
-        '--buckets', help="# buckets, e.g. 2000000", type=int, nargs='+')
+        '--bucket', help="# buckets, e.g. 2000000", type=int, nargs='+')
     find_model_parser.add_argument(
-        '--min-ngram',
+        '--minn',
         help="min character ngram length, e.g. 3",
         type=int,
         nargs='+')
     find_model_parser.add_argument(
-        '--max-ngram',
+        '--maxn',
         help="max character ngram length, e.g. 6",
         type=int,
         nargs='+')
     find_model_parser.add_argument(
-        '--threads', help="number of threads, e.g. 12", type=int, nargs='+')
+        '--thread', help="number of threads, e.g. 12", type=int, nargs='+')
     find_model_parser.add_argument(
-        '--threshold',
-        help="sampling threshold, e.g. 0.0001",
-        type=float,
-        nargs='+')
+        '-t', help="sampling threshold, e.g. 0.0001", type=float, nargs='+')
     find_model_parser.add_argument(
-        '--output',
+        '-o',
         help="file to write JSON models to",
         type=argparse.FileType("wb"),
         default=sys.stdout)
@@ -231,21 +223,20 @@ def update_model(args):
             num_words=args.num_words,
             dim=args.dim,
             input_file=args.input_file,
-            output_file=args.output_file,
-            learning_rate=args.learning_rate,
-            learning_rate_update_rate_change=args.
-            learning_rate_update_rate_change,
-            window_size=args.window_size,
+            output=args.output,
+            lr=args.lr,
+            lr_update_rate=args.lr_update_rate,
+            ws=args.ws,
             epoch=args.epoch,
             min_count=args.min_count,
-            negatives_sampled=args.negatives,
+            neg=args.neg,
             word_ngrams=args.ngrams,
-            loss_function=args.loss_function,
-            num_buckets=args.buckets,
-            min_ngram_len=args.min_ngram,
-            max_ngram_len=args.max_ngram,
-            num_threads=args.threads,
-            sampling_threshold=args.threshold)
+            loss=args.loss,
+            bucket=args.buckets,
+            minn=args.minn,
+            maxn=args.maxn,
+            thread=args.thread,
+            t=args.threshold)
 
         model = model.to_dict()
 
@@ -266,25 +257,24 @@ def find_model(args):
             num_words=args.num_words,
             dim=args.dim,
             input_file=args.input_file,
-            output_file=args.output_file,
-            learning_rate=args.learning_rate,
-            learning_rate_update_rate_change=args.
-            learning_rate_update_rate_change,
-            window_size=args.window_size,
+            output=args.output,
+            lr=args.lr,
+            lr_update_rate=args.lr_update_rate,
+            ws=args.ws,
             epoch=args.epoch,
             min_count=args.min_count,
-            negatives_sampled=args.negatives,
+            neg=args.neg,
             word_ngrams=args.ngrams,
-            loss_function=args.loss_function,
-            num_buckets=args.buckets,
-            min_ngram_len=args.min_ngram,
-            max_ngram_len=args.max_ngram,
-            num_threads=args.threads,
-            sampling_threshold=args.threshold)
+            loss=args.loss,
+            bucket=args.buckets,
+            minn=args.minn,
+            maxn=args.maxn,
+            thread=args.thread,
+            t=args.threshold)
 
         models = [m.to_dict() for m in models]
         logger.info('%s model(s) found' % len(models))
-        args.output.write(json.dumps(models, indent=3))
+        args.o.write(json.dumps(models, indent=3))
 
 
 def find_vectors(args):
@@ -305,10 +295,10 @@ def find_vectors(args):
 
         logger.info('%s vector(s) found' % len(vectors))
 
-        if args.output in [sys.stdout, sys.stderr]:
+        if args.o in [sys.stdout, sys.stderr]:
             x = json.dumps(vectors, indent=3)
         else:
             x = json.dumps(vectors, indent=3).encode()
             logger.info('writing output to %s' % args.output.name)
 
-        args.output.write(x)
+        args.o.write(x)

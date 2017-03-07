@@ -14,11 +14,27 @@
 
 # Description
 
+This package attempts to store model information for use with Facebook
+fastText, as
+described
+[here](https://github.com/salestock/fastText.py "fastText Python interface"). Model
+parameters are stored in a relational database using SQLAlchemy, as
+well as vectors for individual words. Word vectors can be retrieved
+using model information and expressions to select words. In the
+database, the vectors are stored as an array of floats, encoded as
+JSON, and compressed using BZip. This results in database storage
+requirements comparable to flat compressed files, while maintaining
+query performance. Also included is a web application that allows for
+storing and querying the database remotely over HTTP/HTTPS, although
+this is not well tested. In this package are Python classes for
+interfacing with either a local or remote instance of the database,
+using a database or web URL.
+
 # Requirements
 
 **Currently this project requires Python 3**, but I do hope to
 eventually back-port it to Python 2. One dependency is in the Python 3
-version of the bzip package, which allows for the use of a file stream
+version of the bz2 package, which allows for the use of a file stream
 as input, rather than requiring a path to the file.
 
 This project has several dependencies on several Python libraries,

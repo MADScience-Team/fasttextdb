@@ -10,21 +10,6 @@ from .base import FtTestBase
 
 
 class FileLoadTestCase(FtTestBase):
-    def vect_to_dict(self, file):
-        dat = {'model': {}, 'vectors': {}}
-        l = file.readline()
-        parts = l.split()
-        dat['model']['num_words'] = int(parts[0])
-        dat['model']['dim'] = int(parts[1])
-        l = file.readline()
-
-        while l:
-            parts = l.split()
-            dat['vectors'][parts[0]] = [float(x) for x in parts[1:]]
-            l = file.readline()
-
-        return dat
-
     def check_model_data(self, check_data, model):
         mname = model
 
