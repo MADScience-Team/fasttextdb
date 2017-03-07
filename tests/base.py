@@ -6,13 +6,17 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fasttextdb import Base, fasttextdb
 
-_dir = os.path.dirname(__file__)
-_resource_dir = os.path.join(_dir, 'resources')
+my_dir = os.path.dirname(__file__)
+ftdb_path = os.path.join(my_dir, os.pardir, 'scripts', 'ftdb')
+_resource_dir = os.path.join(my_dir, 'resources')
 
 
 class FtTestBase(TestCase):
-    def setUp(self):
-        self.engine = create_engine('sqlite://')
+    def setUp(self, url=None):
+        if url is None:
+            url = 'sqlite://'
+
+        self.engine = create_engine(url)
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
         self.session = self.Session()
@@ -31,8 +35,11 @@ class FtTestBase(TestCase):
 
     @contextmanager
     def open_resource(self, path, mode='rb'):
-        with open(os.path.join(_resource_dir, path), mode) as f:
+        with open(self.get_resource_path(path), mode) as f:
             yield f
+
+    def get_resource_path(self, path):
+        return os.path.join(_resource_dir, path)
 
     def vect_to_dict(self, file):
         dat = {'model': {}, 'vectors': {}}
