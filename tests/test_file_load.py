@@ -14,87 +14,45 @@ from .base import FtTestBase, my_dir, ftdb_path
 
 
 class FileLoadTestCase(FtTestBase):
-    def check_model_data(self, check_data, model, actual=None,
-                         url='sqlite://'):
-        mname = model
+    def _test_load_sqlite(self, model, path):
+        with self.temp_db() as url:
+            with fasttextdb(url) as ftdb, self.open_resource(path) as vecfile:
+                ftdb.commit_file(model, vecfile)
 
-        if actual is None:
+            with self.open_resource(path) as vecfile:
+                exp_model = self.read_model(vecfile)
+                exp_vectors = self.read_vectors(vecfile)
 
-            with fasttextdb(
-                    url,
-                    engine=self.engine,
-                    Session=self.Session,
-                    session=self.session) as ftdb:
-
-                model = ftdb.get_model(mname)
-
-                self.assertEqual(model.name, mname,
-                                 'check model name %s' % mname)
-
-                self.assertEqual(model.dim, check_data['model']['dim'],
-                                 'check model dim %s' % mname)
-                self.assertEqual(model.num_words,
-                                 check_data['model']['num_words'],
-                                 'check model num words %s' % mname)
-
-                cnt = ftdb.count_vectors_for_model(model)
-                self.assertEqual(
-                    len(check_data['vectors']), cnt,
-                    '%s check word count' % mname)
-
-                vectors = ftdb.get_vectors_for_model(model)
-                vectors = {v.word: v.unpack_values() for v in vectors}
-                self.assertEqual(check_data['vectors'], vectors,
-                                 '%s check vectors' % mname)
-
-        else:
-            self.assertEqual(check_data['vectors'], actual,
-                             '%s check vectors' % mname)
+            act_model = self.query_model(url, model)
+            act_vectors = self.query_vectors(url)
+            self.compare_model(exp_model, act_model, '%s model' % model)
+            self.compare_model(exp_vectors, act_vectors, '%s vectors' % model)
 
     def test_load_bz2_sqlite(self):
-        self.load_vectors('test_load.vec.bz2', 'test_load_bz2_sqlite')
-
-        with self.open_resource('test_load.vec.bz2') as res:
-            with bz2.open(res, 'rt') as vecfile:
-                check_data = self.vect_to_dict(vecfile)
-                self.check_model_data(check_data, 'test_load_bz2_sqlite')
+        self._test_load_sqlite('test_load_bz2_sqlite', 'test_load.vec.bz2')
 
     def test_load_gzip_sqlite(self):
-        self.load_vectors('test_load.vec.gz', 'test_load_gzip_sqlite')
+        self._test_load_sqlite('test_load_gz_sqlite', 'test_load.vec.gz')
 
-        with self.open_resource('test_load.vec.gz') as res:
-            with gzip.open(res, 'rt') as vecfile:
-                check_data = self.vect_to_dict(vecfile)
-                self.check_model_data(check_data, 'test_load_gzip_sqlite')
+    def test_load_cli_sqlite(self):
+        model = 'test_load_cli_sqlite'
+        path = 'test_load.vec.bz2'
 
-    def test_load_from_cli(self):
-        path = self.get_resource_path('test_load.vec.bz2')
-
-        with tempfile.NamedTemporaryFile() as db:
-            dbpath = db.name
-            url = 'sqlite:///%s' % dbpath
-            self.setUp(url)
+        with self.temp_db() as url, self.open_resource(path) as vecfile:
 
             args = [
                 sys.executable, ftdb_path, '--url', url, 'file', '--input',
-                path, '--model', 'test_load_from_cli'
+                self.get_resource_path(path), '--model', model
             ]
 
             popen = Popen(args, stdout=PIPE, stderr=PIPE)
             stdout_data, stderr_data = popen.communicate()
 
-            args = [
-                sys.executable, ftdb_path, '--url', url, 'findvectors',
-                '--words', '%', '--model', 'test_load_from_cli'
-            ]
+            with self.open_resource(path) as vecfile:
+                exp_model = self.read_model(vecfile)
+                exp_vectors = self.read_vectors(vecfile)
 
-            popen = Popen(args, stdout=PIPE, stderr=PIPE)
-            stdout_data, stderr_data = popen.communicate()
-            actual = json.loads(stdout_data)
-
-            with self.open_resource('test_load.vec.bz2') as res:
-                with bz2.open(res, 'rt') as vecfile:
-                    check_data = self.vect_to_dict(vecfile)
-                    actual = {a['word']: a['values'] for a in actual}
-                    self.check_model_data(
-                        check_data, 'test_load_from_cli', actual=actual)
+            act_model = self.query_model(url, model)
+            act_vectors = self.query_vectors(url)
+            #            self.compare_model(exp_model, act_model, '%s model' % model)
+            self.compare_model(exp_vectors, act_vectors, '%s vectors' % model)

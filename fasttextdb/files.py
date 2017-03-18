@@ -25,7 +25,7 @@ def get_mime_type(file):
 
 
 @contextmanager
-def open_for_mime_type(file):
+def open_for_mime_type(file, mode='rt'):
     """
     Given a file, use its MIME type to determine whether the file is
     compressed. Then, wrap the file in a GzipFile or BZ2File
@@ -34,11 +34,11 @@ def open_for_mime_type(file):
     mime_type = get_mime_type(file)
 
     if mime_type == 'application/x-gzip' or mime_type == 'application/gzip':
-        yield gzip.open(file, 'rb')
+        yield gzip.open(file, mode=mode)
     elif mime_type == 'application/x-bzip2':
-        yield bz2.open(file, 'rb')
+        yield bz2.open(file, mode=mode)
     else:
-        yield f
+        yield file
 
 
 @contextmanager
@@ -59,9 +59,9 @@ def read_model_file(file_):
     model_file). Returns tuples of (word, vector), where vector is a list of
     floats.
     """
-    l = file_.readline().decode('utf-8')
+    l = file_.readline()
 
     while l:
         parts = l.split()
         yield (parts[0], [float(x) for x in parts[1:]])
-        l = file_.readline().decode('utf-8')
+        l = file_.readline()

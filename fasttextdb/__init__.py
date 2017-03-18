@@ -8,7 +8,6 @@ from sqlalchemy import create_engine
 from .models import *
 from .files import *
 from .vectors import *
-from .args import *
 from .config import *
 from .service import *
 from .urlhandler import *
@@ -73,11 +72,9 @@ def get_parser(description):
     update_parser.add_argument('--input-file', help="input file name")
     update_parser.add_argument('--output', help="output file name")
     update_parser.add_argument(
-        '--learning-rate', help="learning rate, e.g. 0.05", type=float)
+        '--lr', help="learning rate, e.g. 0.05", type=float)
     update_parser.add_argument(
-        '--learning-rate-update-rate-change',
-        help="change in learning rate, e.g. 100",
-        type=int)
+        '--lr-update-rate', help="change in learning rate, e.g. 100", type=int)
     update_parser.add_argument(
         '--ws', help="context window size, e.g. 5", type=int)
     update_parser.add_argument(
@@ -119,12 +116,9 @@ def get_parser(description):
     find_model_parser.add_argument('--input-file', help="input file name")
     find_model_parser.add_argument('--output', help="output file name")
     find_model_parser.add_argument(
-        '--learning-rate',
-        help="learning rate, e.g. 0.05",
-        type=float,
-        nargs='+')
+        '--lr', help="learning rate, e.g. 0.05", type=float, nargs='+')
     find_model_parser.add_argument(
-        '--learning-rate-update-rate-change',
+        '--lr-update-rate',
         help="change in learning rate, e.g. 100",
         type=int,
         nargs='+')
@@ -230,11 +224,11 @@ def update_model(args):
             neg=args.neg,
             word_ngrams=args.ngrams,
             loss=args.loss,
-            bucket=args.buckets,
+            bucket=args.bucket,
             minn=args.minn,
             maxn=args.maxn,
             thread=args.thread,
-            t=args.threshold)
+            t=args.t)
 
         model = model.to_dict()
 
@@ -264,11 +258,11 @@ def find_model(args):
             neg=args.neg,
             word_ngrams=args.ngrams,
             loss=args.loss,
-            bucket=args.buckets,
+            bucket=args.bucket,
             minn=args.minn,
             maxn=args.maxn,
             thread=args.thread,
-            t=args.threshold)
+            t=args.t)
 
         models = [m.to_dict() for m in models]
         logger.info('%s model(s) found' % len(models))
@@ -310,7 +304,8 @@ def main(args=None):
     else:
         args = parser.parse_args(args)
 
-    args.func(args)
+    if hasattr(args, 'func'):
+        args.func(args)
 
 
 if __name__ == '__main__':

@@ -90,7 +90,7 @@ class DbService(FasttextService):
             return q.filter(col == param)
         else:
             try:
-                if len(param) > 1:
+                if len(param) > 0:
                     if len(param) == 2:
                         return q.filter(col.between(*param))
                     else:
@@ -98,6 +98,14 @@ class DbService(FasttextService):
             except:
                 # Guess this wasn't an iterable?
                 return q
+
+    def _eq_or_in(self, type_, col, param, q):
+        if type(param) == type_:
+            return q.filter(col == param)
+        elif param:
+            return q.filter(col.in_(param))
+        else:
+            return q
 
     def _like(self, col, param, q):
         if param:
@@ -125,13 +133,9 @@ class DbService(FasttextService):
                     minn=None,
                     maxn=None,
                     thread=None,
-                    t=None,
-                    session=None):
+                    t=None):
 
-        if not session:
-            session = self.open()
-
-        q = session.query(Model)
+        q = self.session.query(Model)
         q = self._like(Model.owner, owner, q)
         q = self._like(Model.name, name, q)
         q = self._like(Model.description, description, q)
@@ -147,7 +151,7 @@ class DbService(FasttextService):
         q = self._eq_or_range(int, Model.neg, neg, q)
         q = self._eq_or_range(int, Model.word_ngrams, word_ngrams, q)
 
-        q = self._like(Model.loss, loss, q)
+        q = self._eq_or_in(str, Model.loss, loss, q)
 
         q = self._eq_or_range(int, Model.bucket, bucket, q)
         q = self._eq_or_range(int, Model.minn, minn, q)

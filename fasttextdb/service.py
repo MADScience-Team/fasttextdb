@@ -193,8 +193,13 @@ class FasttextService(object):
 
     @inject_model(True)
     def commit_file(self, model, file, progress=False):
+        if hasattr(file, 'name'):
+            filename = file.name
+        else:
+            filename = '???'
+
         self.logger.info('storing vectors from %s for model %s' %
-                         (file.name, model.name))
+                         (filename, model.name))
         batch = []
 
         if progress:

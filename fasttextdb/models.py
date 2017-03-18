@@ -94,6 +94,7 @@ class Model(Base):
             'owner': self.owner,
             'name': self.name,
             'description': self.description,
+            'num_words': self.num_words,
             'dim': self.dim,
             'input_file': self.input_file,
             'output': self.output,
