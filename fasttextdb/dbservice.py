@@ -1,8 +1,35 @@
-from sqlalchemy import create_engine, literal
+from functools import wraps
+from sqlalchemy import create_engine, literal, func, or_, asc, desc
 from sqlalchemy.orm import sessionmaker
 
 from .models import *
 from .service import FasttextService, inject_model
+
+
+def to_dict(func):
+    @wraps(func)
+    def convert(*args, **kwargs):
+        m = func(*args, **kwargs)
+
+        if m is None:
+            return None
+        else:
+            return m.to_dict()
+
+    return convert
+
+
+def to_dicts(func):
+    @wraps(func)
+    def convert(*args, **kwargs):
+        items = func(*args, **kwargs)
+
+        if items is None:
+            return None
+        else:
+            return [i.to_dict() for i in items]
+
+    return convert
 
 
 class DbService(FasttextService):
@@ -31,16 +58,51 @@ class DbService(FasttextService):
             self.session = self.Session()
         return self.session
 
-    def close(self):
+    def close(self, error=None):
         super().open()
         if self.session and self.session.is_active:
-            self.session.commit()
+            if error:
+                self.session.rollback()
+            else:
+                self.session.commit()
         if self.session:
             self.session.close()
+            self.session = None
 
     def _commit(self):
         if self.auto_commit:
             self.session.commit()
+
+    def _parse_sort(self, sorts):
+        for sort in sorts:
+            parts = sort.split('~')
+            if len(parts) > 1:
+                if parts[1] == 'desc':
+                    yield parts[0], desc
+                else:
+                    yield parts[0], asc
+            else:
+                yield parts[0], asc
+
+    def _apply_limit_offset(self, query, sort, page, page_size):
+        if sort is not None and len(sort):
+            query = query.order_by(
+                * [s[1](s[0]) for s in self._parse_sort(sort)])
+
+        if page_size is not None:
+            query = query.limit(page_size)
+
+        if page is not None:
+            query = query.offset(page * page_size)
+
+        print('sort %s' % sort)
+        print('query %s' % query)
+
+        return query
+
+    @to_dict
+    def get_user(self, username):
+        return self.session.query(User).get(username)
 
     @inject_model(True)
     def create_vectors(self, model, vectors):
@@ -53,31 +115,13 @@ class DbService(FasttextService):
                          (len(vectors), model.name))
         return vectors
 
-    @inject_model(resolve=False)
-    def model_exists(self, model):
-        if model.id:
-            q = self.session.query(Model).filter(Model.id == model.id)
-        elif model.name:
-            q = self.session.query(Model).filter(Model.name == model.name)
-        else:
-            return False
+    def model_exists(self, name):
+        return self.session.query(func.count(Model.name)).filter(
+            Model.name == name)[0][0] > 0
 
-        return self.session.query(literal(True)).filter(q.exists()).scalar()
-
-    @inject_model(resolve=False)
-    def get_model(self, model):
-        if model and model.id:
-            return session.query(Model).get(model.id)
-        elif model and model.name:
-            models = list(
-                self.session.query(Model).filter(Model.name == model.name))
-
-            if len(models):
-                return models[0]
-            else:
-                return None
-        else:
-            return None
+    @to_dict
+    def get_model(self, name):
+        return self.session.query(Model).get(name)
 
     def create_model(self, **kwargs):
         model = Model(**kwargs)
@@ -113,6 +157,7 @@ class DbService(FasttextService):
         else:
             return q
 
+    @to_dicts
     def find_models(self,
                     owner=None,
                     name=None,
@@ -161,68 +206,49 @@ class DbService(FasttextService):
 
         return q
 
-    @inject_model(True)
-    def update_model(self,
-                     model,
-                     owner=None,
-                     name=None,
-                     description=None,
-                     num_words=None,
-                     dim=None,
-                     input_file=None,
-                     output=None,
-                     lr=None,
-                     lr_update_rate=None,
-                     ws=None,
-                     epoch=None,
-                     min_count=None,
-                     neg=None,
-                     word_ngrams=None,
-                     loss=None,
-                     bucket=None,
-                     minn=None,
-                     maxn=None,
-                     thread=None,
-                     t=None):
+    @to_dict
+    def update_model(self, name, **kwargs):
+        model = self.session.query(Model).get(name)
 
-        model = super().update_model(
-            model,
-            owner=owner,
-            name=name,
-            description=description,
-            num_words=num_words,
-            dim=dim,
-            input_file=input_file,
-            output=output,
-            lr=lr,
-            lr_update_rate=lr_update_rate,
-            ws=ws,
-            epoch=epoch,
-            min_count=min_count,
-            neg=neg,
-            word_ngrams=word_ngrams,
-            loss=loss,
-            bucket=bucket,
-            minn=minn,
-            maxn=maxn,
-            thread=thread,
-            t=t)
+        if model is None:
+            return None
+
+        for k in kwargs:
+            if hasattr(model, k):
+                setattr(model, k, kwargs[k])
 
         self._commit()
         return model
 
-    @inject_model()
-    def count_vectors_for_model(self, model):
-        return Vector.count_vectors_for_model(self.session, model=model)
+    def count_vectors_for_model(self, name):
+        return self.session.query(func.count(Vector.id)).filter(
+            Vector.model_name == name)[0][0]
 
-    @inject_model()
-    def get_vectors_for_model(self, model):
-        return Vector.vectors_for_model(self.session, model=model)
+    @to_dicts
+    def get_vectors_for_model(self, name, sort=None, page=None,
+                              page_size=None):
+        if sort is None or not len(sort):
+            sort = ['word']
+        q = self.session.query(Vector).filter(Vector.model_name == name)
+        q = self._apply_limit_offset(q, sort, page, page_size)
+        return q
 
-    @inject_model()
-    def count_vectors_for_words(self, model, words):
-        return Vector.count_vectors_for_words(self.session, words, model=model)
+    def count_vectors_for_words(self, name, words):
+        return self.session.query(func.count(Vector.id)).filter(
+            Vector.model_name == name).filter(
+                or_(* [Vector.word.like(w) for w in words]))[0][0]
 
-    @inject_model()
-    def get_vectors_for_words(self, model, words):
-        return Vector.vectors_for_words(self.session, words, model=model)
+    @to_dicts
+    def get_vectors_for_words(self,
+                              name,
+                              words,
+                              sort=None,
+                              page=None,
+                              page_size=None):
+        if sort is None or not len(sort):
+            sort = ['word']
+        q = self.session.query(Vector).filter(
+            Vector.model_name == name).filter(
+                or_(* [Vector.word.like(w) for w in words]))
+        q = self._apply_limit_offset(q, sort, page, page_size)
+        return q

@@ -6,19 +6,10 @@ import magic
 import bz2
 import gzip
 import json
-import flask_login
 
-from flask import Flask
-from flask import request
-from flask import render_template
-from flask import send_from_directory
-from flask import jsonify
-from flask import make_response
-from flask import Response
-from flask import redirect
-from flask import url_for
-from flask import flash
-from flask import get_flashed_messages
+from flask import (Flask, request, render_template, send_from_directory,
+                   jsonify, make_response, Response, redirect, url_for, flash,
+                   get_flashed_messages, session)
 
 from sqlalchemy import create_engine, Column, Integer, String, Float
 
@@ -32,19 +23,17 @@ from ..models import *
 from ..util import *
 from ..exceptions import *
 from ..authenticate import *
+from ..urlhandler import *
 
 __all__ = ['app', 'run_app']
 
 config = load_config()
-engine = create_engine(config['url'])
-Session = sessionmaker(bind=engine)
+engine = None
+Session = None
+ftdb = None
 
 app = Flask(__name__)
 app.secret_key = config['secret']
-
-login_manager = flask_login.LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = "login"
 
 static_dir = os.path.join(app.root_path, 'static')
 node_dir = os.path.join(static_dir, 'node_modules')
@@ -89,71 +78,50 @@ def get_param_list(param, type_=None):
     return request.args.getlist(param, type_)
 
 
-@login_manager.user_loader
-def user_loader(name):
-    credentials = config['authentication']['credentials']
-    name, password = get_credentials(config, request, name, None, True)
-    loader = config['authentication']['loader']
-    user = loader(config, request, name, password, True)
-    verify = config['authentication']['verify']
-    user._authenticated = verify(config, request, user, name, password, True)
-    request.user = user
-    return user
-
-
-@login_manager.request_loader
-def request_loader(request):
-    credentials = config['authentication']['credentials']
-    name, password = credentials(config, request, None, None, False)
-    loader = config['authentication']['loader']
-    user = loader(config, request, name, password, False)
-
-    if user is None:
-        return user
-
-    verify = config['authentication']['verify']
-    user._authenticated = verify(config, request, user, name, password, False)
-
-    if not user.is_authenticated():
-        return None
-
-    request.user = user
-    return user
+def user_loader():
+    return config['authentication']['loader']()
 
 
 @app.before_first_request
 def prepare_db():
+    global engine, Session, ftdb
+    engine = create_engine(config['url'])
+    print('engine for %s' % config['url'])
+    Session = sessionmaker(bind=engine)
     Base.metadata.create_all(engine)
+    ftdb = fasttextdb(config['url'])
 
 
 @app.before_request
 def prepare_request():
-    request.session = Session()
+    request.config = config
+    request.service = ftdb
+    request.service.open()
+    request.user, request.authenticated = config['authentication']['loader']()
 
-    request.paging = {
-        'page': get_param('page', 0, int),
-        'page_size': get_param('page_size', 25, int)
-    }
+    if request.user and request.authenticated:
+        session['username'] = request.user['username']
 
+    request.page = get_param('page', 0, int)
+    request.page_size = get_param('page_size', 25, int)
     request.camel = get_param('camel', False, bool)
     request.packed = get_param('camel', False, bool)
     request.include_model = get_param('include_model', False, bool)
     request.include_model_id = get_param('include_model_id', False, bool)
     request.words = get_param_list('word')
-    request.model = list(ints_or_strs(get_param_list('model')))
+    request.sort = get_param_list('sort')
+    request.model = list(ints_or_strs(*get_param_list('model')))
 
 
 @app.after_request
 def cleanup(response):
-    if request.session.is_active:
-        request.session.commit()
-        request.session.close()
+    request.service.close()
     return response
 
 
 @app.errorhandler(Exception)
 def handle_errors(exception):
-    request.session.rollback()
+    request.service.close(exception)
     logging.error(exception, exc_info=True)
     return 'Something went wrong', 500
 
@@ -164,7 +132,7 @@ def handler_web_exception(e):
         return make_response(
             jsonify(message=e.message, status=e.status), e.status)
     else:
-        return render_template('error.html', error=e)
+        return render_template('error.html', error=e), e.status
 
 
 @app.route('/bootstrap/<path:file>')

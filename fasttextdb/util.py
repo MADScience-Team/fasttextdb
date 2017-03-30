@@ -4,7 +4,7 @@ from flask import request
 
 __all__ = [
     'camel_to_under', 'under_to_camel', 'get_requested_type',
-    'get_content_type'
+    'get_content_type', 'ints_or_strs', 'int_or_str'
 ]
 
 _first_cap_re = re.compile('(.)([A-Z][a-z]+)')

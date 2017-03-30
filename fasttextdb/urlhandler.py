@@ -6,6 +6,8 @@ from urllib.parse import urlparse
 
 def fasttextdb(url,
                name=None,
+               auto_page=False,
+               auto_page_size=1000,
                config=None,
                engine=None,
                Session=None,
@@ -30,7 +32,12 @@ def fasttextdb(url,
     x = urlparse(url)
 
     if x.scheme == 'http' or x.scheme == 'https':
-        return WebService(url, name=name, config=config)
+        return WebService(
+            url,
+            name=name,
+            config=config,
+            auto_page=auto_page,
+            auto_page_size=auto_page_size)
     else:
         return DbService(
             url,

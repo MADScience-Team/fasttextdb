@@ -1,4 +1,5 @@
 import requests
+import json
 
 from functools import wraps
 from requests.auth import AuthBase
@@ -23,8 +24,8 @@ class FasttextAuth(AuthBase):
             self.config = {}
 
     def __call__(self, r):
-        if 'headers' in self.config and 'name' in self.config['headers']:
-            name_header = self.config['headers']['name'][0]
+        if 'headers' in self.config and 'username' in self.config['headers']:
+            name_header = self.config['headers']['username'][0]
         else:
             name_header = 'X-Fasttextdb-Username'
 
@@ -63,14 +64,34 @@ def _raise_response_error(func):
     @wraps(func)
     def response_error_wrapper(*args, **kwargs):
         response = func(*args, **kwargs)
-        response.raise_for_status()
-        args[0].session = response.cookies['session']
-        return json.loads(response.text)
+
+        try:
+            response.raise_for_status()
+
+            if 'session' in response.cookies:
+                args[0].session = response.cookies['session']
+            else:
+                args[0].session = None
+
+            return response.json()
+        except:
+            print('response %s' % response.text)
+            raise
 
     return response_error_wrapper
 
 
-class WebService(object):
+class WebService(FasttextService):
+    def __init__(self,
+                 url,
+                 name=None,
+                 config=None,
+                 auto_page=False,
+                 auto_page_size=1000):
+        super().__init__(url, name=name, config=config)
+        self.auto_page = auto_page
+        self.auto_page_size = auto_page_size
+
     def open(self):
         super().open()
         self.session = None
@@ -90,6 +111,10 @@ class WebService(object):
         return requests.get(
             self._get_url(endpoint),
             cookies=self._get_cookies(),
+            headers={
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
             auth=FasttextAuth(self.username, self.password, self.config),
             **kwargs)
 
@@ -98,6 +123,10 @@ class WebService(object):
         return requests.put(
             self._get_url(endpoint),
             cookies=self._get_cookies(),
+            headers={
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
             auth=FasttextAuth(self.username, self.password, self.config),
             **kwargs)
 
@@ -106,22 +135,19 @@ class WebService(object):
         return requests.post(
             self._get_url(endpoint),
             cookies=self._get_cookies(),
+            headers={
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
             auth=FasttextAuth(self.username, self.password, self.config),
             **kwargs)
 
-    @inject_model(resolve=False)
-    def model_exists(self, model, session=None):
-        raise Exception('not yet implemented')
+    def model_exists(self, name):
+        response = self.get('model/%s/exists' % name)
+        return response['exists']
 
-    @from_dict(Model, multiple=False)
-    @inject_model(resolve=False)
-    def get_model(self, model):
-        if model.id:
-            return self.get('model/%s' % model.id)
-        elif model.name:
-            return self.get('model/name/%s' % model.name)
-        else:
-            raise Exception('must specify either model name or ID')
+    def get_model(self, name):
+        return self.get('model/%s' % name)
 
     @from_dict(Model, multiple=False)
     @inject_model(resolve=False)
@@ -144,7 +170,6 @@ class WebService(object):
             for vj in self.post(url, json=[v.to_dict() for v in vectors])
         ]
 
-    @from_dict(Model)
     def find_models(self,
                     owner=None,
                     name=None,
@@ -165,50 +190,67 @@ class WebService(object):
                     minn=None,
                     maxn=None,
                     thread=None,
-                    t=None,
-                    session=None):
-        raise Exception('not yet implemented')
-
-    @inject_model(True)
-    def update_model(self,
-                     model,
-                     owner=None,
-                     name=None,
-                     description=None,
-                     num_words=None,
-                     dim=None,
-                     input_file=None,
-                     output=None,
-                     lr=None,
-                     lr_update_rate=None,
-                     ws=None,
-                     epoch=None,
-                     min_count=None,
-                     neg=None,
-                     word_ngrams=None,
-                     loss=None,
-                     bucket=None,
-                     minn=None,
-                     maxn=None,
-                     thread=None,
-                     t=None):
-        raise Exception('not yet implemented')
-
-    @inject_model()
-    def count_vectors_for_model(self, model):
-        raise Exception('not yet implemented')
-
-    @from_dict(Vector)
-    @inject_model()
-    def get_vectors_for_model(self, model):
-        raise Exception('not yet implemented')
-
-    @inject_model()
-    def count_vectors_for_words(self, model, words):
+                    t=None):
         return self.post(
-            'model/%s/vectors/words/count' % model.id, json=words)['count']
+            'search/model',
+            json={
+                'owner': owner,
+                'name': name,
+                'description': description,
+                'num_words': num_words,
+                'dim': dim,
+                'input_file': input_file,
+                'output': output,
+                'lr': lr,
+                'lr_update_rate': lr_update_rate,
+                'ws': ws,
+                'epoch': epoch,
+                'min_count': min_count,
+                'neg': neg,
+                'word_ngrams': word_ngrams,
+                'loss': loss,
+                'bucket': bucket,
+                'minn': minn,
+                'maxn': maxn,
+                'thread': thread,
+                't': t
+            })
 
-    @from_dict(Vector)
-    @inject_model()
-    def get_vectors_for_words(self, model, words):
-        return self.post('model/%s/vectors/words' % model.id, json=words)
+    def update_model(self, name, **kwargs):
+        return self.put('model/%s' % name, json=kwargs)
+
+    def count_vectors_for_model(self, name):
+        return self.post('model/%s/vectors/count' % name, json=[])['count']
+
+    def get_vectors_for_model(self, name, sort=None, page=None,
+                              page_size=None):
+
+        if sort is None or not len(sort):
+            sort = ['word']
+
+        return self.post(
+            'model/%s/vectors/words' % name,
+            json=[],
+            params={'sort': sort,
+                    'page': page,
+                    'page_size': page_size})
+
+    def count_vectors_for_words(self, name, words):
+        return self.post('model/%s/vectors/count' % name, json=words)['count']
+
+    def get_vectors_for_words(self,
+                              name,
+                              words,
+                              sort=None,
+                              page=None,
+                              page_size=None):
+
+        if sort is None or not len(sort):
+            sort = ['word']
+
+        return self.post(
+            'model/%s/vectors/words' % name,
+            json=words,
+            params={'sort': sort,
+                    'page': page,
+                    'page_size': page_size})

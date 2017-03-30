@@ -11,8 +11,6 @@ from sqlalchemy.orm import relationship
 
 from sqlalchemy import func
 
-from flask_login import UserMixin
-
 from .util import under_to_camel
 
 __all__ = [
@@ -30,27 +28,23 @@ JSON_ENCODING = 0b00010000
 Base = declarative_base()
 
 
-class User(Base, UserMixin):
+class User(Base):
     """
     Contains information sufficient to authenticate a user by user ID
     and password
     """
     __tablename__ = 'user'
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
+    username = Column(String, primary_key=True)
     password_hash = Column(String)
 
-    def is_authenticated(self):
-        if hasattr(self, '_authenticated'):
-            return self._authenticated
-        else:
-            return True
+    def to_dict(self):
+        return {'username': self.username, 'password_hash': self.password_hash}
 
-    def set_authenticated(self, authenticated):
-        self._authenticated = authenticated
 
-    def get_id(self):
-        return self.name
+#class Namespace(Base):
+#    __tablename__ = 'namespace'
+#    name = Column(String, primary_key=True)
+#    description = Column(Text)
 
 
 class Model(Base):
@@ -58,9 +52,8 @@ class Model(Base):
     Metadata for a model (set of vectors)
     """
     __tablename__ = 'model'
-    id = Column(Integer, primary_key=True)
     owner = Column(String)
-    name = Column(String)
+    name = Column(String, primary_key=True)
     description = Column(Text)
     num_words = Column(Integer)
     dim = Column(Integer)
@@ -82,7 +75,7 @@ class Model(Base):
 
     @staticmethod
     def count_models(session):
-        return list(session.query(func.count(Model.id)))[0][0]
+        return list(session.query(func.count(Model.name)))[0][0]
 
     @staticmethod
     def from_dict(data):
@@ -90,7 +83,6 @@ class Model(Base):
 
     def to_dict(self, camel=False):
         d = {
-            'id': self.id,
             'owner': self.owner,
             'name': self.name,
             'description': self.description,
@@ -138,92 +130,12 @@ class Vector(Base):
     id = Column(Integer, primary_key=True)
     word = Column(Unicode)
     packed_values = Column(LargeBinary)
-    model_id = Column(Integer, ForeignKey('model.id'), index=True)
+    model_name = Column(String, ForeignKey('model.name'), index=True)
     model = relationship("Model")
     encoding_compression = Column(SmallInteger)
 
     __table_args__ = (UniqueConstraint(
-        'model_id', 'word', name='uk_model_word'), )
-
-    @staticmethod
-    def count_vectors_for_model(session, model):
-        """
-        Count the vectors in the database that belong to the specified
-        model. Returns the count.
-        """
-        return list(
-            session.query(func.count(Vector.id)).filter(Vector.model_id ==
-                                                        model.id))[0][0]
-
-    @staticmethod
-    def vectors_for_model(session, model):
-        """
-        Query for vectors belonging to the specified model. Returns
-        the query object, which can be iterated over to get the
-        vectors, or further constrained.
-        """
-        return session.query(Vector).filter(Vector.model_id == model.id)
-
-    @staticmethod
-    def count_vectors_for_word(session, word, model=None):
-        """
-        Count vectors matching an single word and optionally
-        belonging to the specified model. Returns the query object,
-        which can be iterated over to get the vectors, or further
-        constrained.
-        """
-        q = session.query(func.count(Vector.id))
-
-        if model:
-            q = q.filter(Vector.model_id == model.id)
-
-        return list(q.filter(Vector.word == word))[0][0]
-
-    @staticmethod
-    def vectors_for_word(session, word, model=None):
-        """
-        Query for vectors matching an single word and optionally
-        belonging to the specified model. Returns the query object,
-        which can be iterated over to get the vectors, or further
-        constrained.
-        """
-        q = session.query(Vector)
-
-        if model:
-            q = q.filter(Vector.model_id == model.id)
-
-        return q.filter(Vector.word == word)
-
-    @staticmethod
-    def count_vectors_for_words(session, words, model=None):
-        """
-        Count vectors matching any of the specfied words and optionally
-        belonging to the specified model. Returns the query object,
-        which can be iterated over to get the vectors, or further
-        constrained.
-        """
-        q = session.query(func.count(Vector.id))
-
-        if model:
-            q = q.filter(Vector.model_id == model.id)
-
-        return list(
-            q.filter(or_(* [Vector.word.like(w) for w in words])))[0][0]
-
-    @staticmethod
-    def vectors_for_words(session, words, model=None):
-        """
-        Query for vectors matching any of the specified words and optionally
-        belonging to the specified model. Returns the query object,
-        which can be iterated over to get the vectors, or further
-        constrained.
-        """
-        q = session.query(Vector)
-
-        if model:
-            q = q.filter(Vector.model_id == model.id)
-
-        return q.filter(or_(* [Vector.word.like(w) for w in words]))
+        'model_name', 'word', name='uk_model_word'), )
 
     @staticmethod
     def from_dict(data):
@@ -296,7 +208,7 @@ class Vector(Base):
     def to_dict(self,
                 camel=False,
                 include_model=False,
-                include_model_id=False,
+                include_model_name=False,
                 packed=False):
         """
         Converts the vector to a dict, suitable for encoding to
@@ -315,8 +227,8 @@ class Vector(Base):
 
         if include_model:
             x['model'] = self.model.to_dict()
-        elif include_model_id:
-            x['model_id'] = self.model_id
+        elif include_model_name:
+            x['model_name'] = self.model_name
 
         if camel:
             x2 = {}
@@ -333,4 +245,4 @@ class Vector(Base):
         """
         Converts the vector to a list, suitable for encoding as a CSV row.
         """
-        return [self.model_id, self.id, self.word] + self.unpack_values()
+        return [self.model_name, self.id, self.word] + self.unpack_values()

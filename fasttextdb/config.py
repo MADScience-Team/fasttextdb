@@ -38,19 +38,17 @@ CONFIG_DEFAULTS = {
         'version': 1
     },
     'authentication': {
-        'credentials': ('.authenticate.get_credentials', 'fasttextdb'),
-        'verify': ('.authenticate.sha256_verify', 'fasttextdb'),
         'loader': ('.authenticate.load_user', 'fasttextdb'),
         'headers': {
-            'name': ['X-Fasttextdb-Username'],
+            'username': ['X-Fasttextdb-Username', 'X-Fasttextdb-Name'],
             'password': ['X-Fasttextdb-Password']
         },
         'form': {
-            'name': ['name', 'username'],
+            'username': ['username', 'name'],
             'password': ['password']
         },
         'json': {
-            'name': ['name', 'username', 'userName'],
+            'name': ['username', 'userName'],
             'password': ['password']
         }
     },
@@ -93,20 +91,12 @@ def _resolve_function(fn):
 def _resolve_config_items(config):
     for k in config['users']:
         user = config['users'][k]
-        kwargs = {'name': k, 'password_hash': user['password_hash']}
-        config['users'][k] = User(**kwargs)
+        kwargs = {'username': k, 'password_hash': user['password_hash']}
+        config['users'][k] = kwargs
 
     if not callable(config['authentication']['loader']):
         config['authentication']['loader'] = _resolve_function(
             config['authentication']['loader'])
-
-    if not callable(config['authentication']['verify']):
-        config['authentication']['verify'] = _resolve_function(
-            config['authentication']['verify'])
-
-    if not callable(config['authentication']['credentials']):
-        config['authentication']['credentials'] = _resolve_function(
-            config['authentication']['credentials'])
 
     return config
 

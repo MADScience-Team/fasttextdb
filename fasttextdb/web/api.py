@@ -7,7 +7,7 @@ from flask_login import login_user
 from functools import wraps
 
 from ..models import *
-from .app import app, user_loader, request_loader, page_request
+from .app import app, user_loader
 from ..exceptions import *
 from .pages import upload_vectors_for_model
 
@@ -15,16 +15,10 @@ from .pages import upload_vectors_for_model
 def api_auth(func):
     @wraps(func)
     def check_auth(*args, **kwargs):
-        user = user_loader(session.get('user_id'))
+        if not request.authenticated or request.user is None:
+            raise UnauthorizedException(
+                'authentication required for API access')
 
-        if user is None:
-            user = request_loader(request)
-
-            if user is None:
-                raise UnauthorizedException(
-                    'authentication required for API access')
-
-        login_user(user)
         return func(*args, **kwargs)
 
     return check_auth
@@ -50,7 +44,7 @@ def _iter_csv(data):
 
 
 @app.route("/api/model/<id_or_name>/vectors", methods=['POST'])
-def create_vectors(id_or_name):
+def api_create_vectors(id_or_name):
     if id_or_name.isdigit():
         id_or_name = int(id_or_name)
 
@@ -62,99 +56,94 @@ def create_vectors(id_or_name):
         raise NotFoundException('Could not find a model with ID %s' % id)
 
 
-@app.route("/api/model/<id_or_name>/exists", methods=['GET'])
+@app.route("/api/model/<name>/exists", methods=['GET'])
 @api_auth
-def model_exists(id_or_name):
-    if id_or_name.isdigit():
-        id_or_name = int(id_or_name)
-
-    exists = request.service.model_exists(id_or_name)
+def api_model_exists(name):
+    exists = request.service.model_exists(name)
     return jsonify({'exists': exists})
 
 
-@app.route("/api/model/<id_or_name>", methods=['GET'])
+@app.route("/api/model/<name>", methods=['GET'])
 @api_auth
-def get_model(id_or_name):
-    if id_or_name.isdigit():
-        id_or_name = int(id_or_name)
+def api_get_model(name):
+    print('#api_get_model %s' % name)
 
-    if request.service.model_exists(id_or_name):
-        model = request.service.get_model(id_or_name)
-        return jsonify(model.to_dict())
+    if request.service.model_exists(name):
+        model = request.service.get_model(name)
+        return jsonify(model)
     else:
-        raise NotFoundException('Could not find a model with ID %s' % id)
+        raise NotFoundException('Could not find a model with name %s' % name)
 
 
 @app.route("/api/model/create", methods=['POST'])
 @app.route("/api/model", methods=['POST'])
 @api_auth
-def create_model():
+def api_create_model():
     model = request.service.create_model(**request.json)
     return jsonify(model.to_dict()), 201
 
 
-@app.route("/api/search/model", methods=['GET'])
+@app.route("/api/search/model", methods=['PUT', 'POST'])
 @api_auth
-def find_models():
-    models = request.service.find_models(**request.json)
-    return jsonify([m.to_dict() for m in models])
+def api_find_models():
+    return jsonify(request.service.find_models(**request.json))
 
 
-@app.route("/api/model/<id_or_name>", methods=['PUT'])
+@app.route("/api/model/<name>", methods=['PUT'])
 @api_auth
-def update_model(id_or_name):
-    if id_or_name.isdigit():
-        id_or_name = int(id_or_name)
-
-    if request.service.model_exists(id_or_name):
-        model = request.service.get_model(id_or_name)
-        model = request.service.update_model(id_or_name, **request.json)
-        return jsonify(model.to_dict())
+def api_update_model(name):
+    if request.service.model_exists(name):
+        model = request.service.update_model(name, **request.json)
+        return jsonify(model)
     else:
         raise NotFoundException('Could not find a model with ID %s' % id)
 
 
-@app.route("/api/model/vectors/count", methods=['GET', 'POST'])
+@app.route("/api/model/<name>/vectors/count", methods=['GET', 'POST'])
 @api_auth
-def count_vectors_for_model(id_or_name):
-    if id_or_name.isdigit():
-        id_or_name = int(id_or_name)
-
-    if request.service.model_exists(id_or_name):
+def api_count_vectors_for_model(name):
+    if request.service.model_exists(name):
         if request.method == 'POST':
             words = request.json
         else:
             words = request.words
 
         if words and len(words):
-            count = request.service.count_vectors_for_words(id_or_name, words)
+            count = request.service.count_vectors_for_words(name, words)
         else:
-            count = request.service.count_vectors_for_model(id_or_name)
+            count = request.service.count_vectors_for_model(name)
+
         return jsonify({'count': count})
     else:
-        raise NotFoundException('Could not find a model with ID %s' % id)
+        raise NotFoundException('Could not find a model with name %s' % name)
 
 
-@app.route("/api/model/vectors", methods=['GET', 'POST'])
+@app.route("/api/model/<name>/vectors/words", methods=['GET', 'POST'])
 @api_auth
-def get_vectors_for_model(id_or_name):
-    if id_or_name.isdigit():
-        id_or_name = int(id_or_name)
-
-    if request.service.model_exists(id_or_name):
+def api_get_vectors_for_model(name):
+    if request.service.model_exists(name):
         if request.method == 'POST':
             words = request.json
         else:
             words = request.words
 
         if words and len(words):
-            vectors = request.service.get_vectors_for_words(id_or_name, words)
+            vectors = request.service.get_vectors_for_words(
+                name,
+                words,
+                sort=request.sort,
+                page=request.page,
+                page_size=request.page_size)
         else:
-            vectors = request.service.get_vectors_for_model(id_or_name)
+            vectors = request.service.get_vectors_for_model(
+                name,
+                sort=request.sort,
+                page=request.page,
+                page_size=request.page_size)
 
-        return jsonify([v.to_json() for v in vectors])
+        return jsonify(vectors)
     else:
-        raise NotFoundException('Could not find a model with ID %s' % id)
+        raise NotFoundException('Could not find a model with name %s' % name)
 
 
 def _vectors_response(vectors, template, method, **kwargs):
