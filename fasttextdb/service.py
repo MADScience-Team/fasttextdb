@@ -191,15 +191,27 @@ class FasttextService(object):
 
         return model
 
-    @inject_model(True)
-    def commit_file(self, model, file, progress=False):
+    def _process_batch(self, name, batch):
+        by_word = {v['word']: v for v in batch}
+        existing = {
+            w: by_word[w]
+            for w in self.get_words(name, by_word.keys())
+        }
+        new_ = {v['word']: v for v in batch if v['word'] not in existing}
+
+        if len(new_):
+            self.create_vectors(name, new_.values())
+        if len(existing):
+            self.update_vectors(name, existing.values())
+
+    def commit_file(self, name, file, progress=False):
         if hasattr(file, 'name'):
             filename = file.name
         else:
             filename = '???'
 
         self.logger.info('storing vectors from %s for model %s' %
-                         (filename, model.name))
+                         (filename, name))
         batch = []
 
         if progress:
@@ -207,29 +219,34 @@ class FasttextService(object):
 
         cnt = 0
 
+        if self.model_exists(name):
+            model = self.get_model(name)
+        else:
+            model = {'name': name, 'num_words': None, 'dim': None}
+            self.create_model(**model)
+
         with open_for_mime_type(file) as f:
-            with model_file(f) as (num_words, dim, f):
+            with model_file(f, otype=dict) as fmodel:
                 if progress:
-                    bar.max_value = num_words
+                    bar.max_value = fmodel['num_words']
 
-                if ((model.num_words != num_words) or (model.dim != dim)):
+                if ((fmodel['num_words'] != model['num_words']) or
+                    (fmodel['dim'] != model['dim'])):
                     model = self.update_model(
-                        model, num_words=num_words, dim=dim)
+                        name, num_words=fmodel['num_words'], dim=fmodel['dim'])
 
-                for word, values in read_model_file(f):
-                    vector = Vector(word=word)
-                    vector.pack_values(values)
+                for vector in read_model_file(f, otype=dict):
                     batch.append(vector)
 
                     if len(batch) == 1000:
-                        self.create_vectors(model, batch)
+                        self._process_batch(name, batch)
                         cnt += len(batch)
                         batch = []
                         if progress:
                             bar.update(cnt)
 
                 if len(batch) > 0:
-                    self.create_vectors(model, batch)
+                    self._process_batch(name, batch)
                     cnt += len(batch)
                     if progress:
                         bar.update(cnt)

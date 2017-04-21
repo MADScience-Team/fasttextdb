@@ -1,8 +1,3 @@
-import json
-import bz2
-import zlib
-import base64
-
 from sqlalchemy import Column, Integer, String, Float, UniqueConstraint
 from sqlalchemy import Unicode, Text, ForeignKey, LargeBinary
 from sqlalchemy import SmallInteger, or_
@@ -12,18 +7,9 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import func
 
 from .util import under_to_camel
+from .vectors import *
 
-__all__ = [
-    'User', 'Base', 'Model', 'Vector', 'NO_COMPRESSION', 'ZLIB_COMPRESSION',
-    'BZ2_COMPRESSION', 'JSON_ENCODING'
-]
-
-COMPRESSION_MASK = 0b00001111
-NO_COMPRESSION = 0b11110000
-ZLIB_COMPRESSION = 0b00000001
-BZ2_COMPRESSION = 0b00000010
-ENCODING_MASK = 0b11110000
-JSON_ENCODING = 0b00010000
+__all__ = ['User', 'Base', 'Model', 'Vector']
 
 Base = declarative_base()
 
@@ -77,10 +63,6 @@ class Model(Base):
     def count_models(session):
         return list(session.query(func.count(Model.name)))[0][0]
 
-    @staticmethod
-    def from_dict(data):
-        return Model(**data)
-
     def to_dict(self, camel=False):
         d = {
             'owner': self.owner,
@@ -132,78 +114,9 @@ class Vector(Base):
     packed_values = Column(LargeBinary)
     model_name = Column(String, ForeignKey('model.name'), index=True)
     model = relationship("Model")
-    encoding_compression = Column(SmallInteger)
 
     __table_args__ = (UniqueConstraint(
         'model_name', 'word', name='uk_model_word'), )
-
-    @staticmethod
-    def from_dict(data):
-        v = Vector(
-            word=data['word'],
-            encoding_compression=data['encoding_compression'])
-
-        if 'packed_values' in data:
-            v.packed_values = base64.b64decode(data['packed_values'])
-        elif 'values' in data:
-            v.values = data['values']
-            v.pack_values(data['values'])
-
-        if 'model_id' in data:
-            v.model_id = data['model_id']
-            v.model = Model(id=data['model_id'])
-        elif 'model' in data:
-            m = Model.from_dict(data['model'])
-            v.model_id = m.id
-            v.model = m
-
-        return v
-
-    def pack_values(self, values, encoding=None, compression=None):
-        """
-        Given a list of floats, this method will encode them as JSON
-        and optionally compress them into the packed_values column for
-        storage in the database. Returns Vector object itself.
-        """
-        x = values
-        x = json.dumps(x)
-
-        if not compression:
-            if not self.encoding_compression:
-                compression = BZ2_COMPRESSION
-            else:
-                compression = self.encoding_compression & COMPRESSION_MASK
-
-        if not encoding:
-            if not self.encoding_compression:
-                encoding = JSON_ENCODING
-            else:
-                encoding = self.encoding_compression & ENCODING_MASK
-
-        if (compression & COMPRESSION_MASK) == BZ2_COMPRESSION:
-            x = bz2.compress(str.encode(x))
-        elif (compression & COMPRESSION_MASK) == ZLIB_COMPRESSION:
-            x = zlib.compress(str.encode(x))
-
-        self.packed_values = x
-        self.encoding_compression = encoding ^ compression
-        return self
-
-    def unpack_values(self):
-        """
-        unpacks (msgpack.unpackb) the stored float values and returns the list
-        """
-        x = self.packed_values
-
-        if (self.encoding_compression & COMPRESSION_MASK) == BZ2_COMPRESSION:
-            x = bz2.decompress(x)
-        elif (self.encoding_compression &
-              COMPRESSION_MASK) == ZLIB_COMPRESSION:
-            x = zlib.decompress(x)
-
-        x = json.loads(x)
-
-        return x
 
     def to_dict(self,
                 camel=False,
@@ -214,16 +127,12 @@ class Vector(Base):
         Converts the vector to a dict, suitable for encoding to
         JSON. The Model values are under the key 'values'.
         """
-        x = {
-            'id': self.id,
-            'word': self.word,
-            'encoding_compression': self.encoding_compression
-        }
+        x = {'id': self.id, 'word': self.word}
 
         if packed:
-            x['packed_values'] = base64.b64encode(self.packed_values).decode()
+            x['packed_values'] = self.packed_values
         else:
-            x['values'] = self.unpack_values()
+            x['values'] = list(unpack_values(self.packed_values))
 
         if include_model:
             x['model'] = self.model.to_dict()
@@ -245,4 +154,4 @@ class Vector(Base):
         """
         Converts the vector to a list, suitable for encoding as a CSV row.
         """
-        return [self.model_name, self.id, self.word] + self.unpack_values()
+        return [self.model_name, self.word] + unpack_values(self.packed_values)

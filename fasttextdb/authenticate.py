@@ -16,18 +16,21 @@ def _get_username():
     c = config['authentication']
     headers = c['headers']
     form = c['form']
+    json = c['json']
 
     for h in headers['username']:
         if h in request.headers:
             return request.headers[h], False
 
-    for x in form['username']:
-        if x in request.form:
-            return request.form[x], False
+    if request.form is not None:
+        for x in form['username']:
+            if x in request.form:
+                return request.form[x], False
 
-    for x in form['json']:
-        if x in request.json:
-            return request.json[x], False
+    if request.json is not None:
+        for x in json['username']:
+            if x in request.json:
+                return request.json[x], False
 
     return None, False
 
@@ -37,18 +40,21 @@ def _get_password():
     c = config['authentication']
     headers = c['headers']
     form = c['form']
+    json = c['json']
 
     for h in headers['password']:
         if h in request.headers:
             return request.headers[h]
 
-    for x in form['password']:
-        if x in request.form:
-            return request.form[x]
+    if request.form is not None:
+        for x in form['password']:
+            if x in request.form:
+                return request.form[x]
 
-    for x in form['json']:
-        if x in request.json:
-            return request.json[x]
+    if request.json is not None:
+        for x in json['password']:
+            if x in request.json:
+                return request.json[x], False
 
     return None
 

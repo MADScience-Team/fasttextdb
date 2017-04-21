@@ -230,8 +230,6 @@ def update_model(args):
             thread=args.thread,
             t=args.t)
 
-        model = model.to_dict()
-
         for k in model:
             logger.info('updated model %s: %s' % (k, model[k]))
 
@@ -264,7 +262,6 @@ def find_model(args):
             thread=args.thread,
             t=args.t)
 
-        models = [m.to_dict() for m in models]
         logger.info('%s model(s) found' % len(models))
         args.o.write(json.dumps(models, indent=3))
 
@@ -276,15 +273,6 @@ def find_vectors(args):
 
     with fasttextdb(config['url'], config=config) as ftdb:
         vectors = ftdb.get_vectors_for_words(args.model, args.words)
-
-        vectors = [
-            v.to_dict(
-                camel=args.camel,
-                include_model=args.include_model,
-                include_model_id=args.include_model_id,
-                packed=args.packed) for v in vectors
-        ]
-
         logger.info('%s vector(s) found' % len(vectors))
 
         if args.o in [sys.stdout, sys.stderr]:

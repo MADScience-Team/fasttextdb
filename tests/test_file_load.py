@@ -39,7 +39,6 @@ class FileLoadTestCase(FtTestBase):
         path = 'test_load.vec.bz2'
 
         with self.temp_db() as url, self.open_resource(path) as vecfile:
-
             args = [
                 sys.executable, ftdb_path, '--url', url, 'file', '--input',
                 self.get_resource_path(path), '--model', model

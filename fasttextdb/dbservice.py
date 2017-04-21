@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 
 from .models import *
 from .service import FasttextService, inject_model
+from .vectors import *
 
 
 def to_dict(func):
@@ -95,25 +96,48 @@ class DbService(FasttextService):
         if page is not None:
             query = query.offset(page * page_size)
 
-        print('sort %s' % sort)
-        print('query %s' % query)
-
         return query
 
     @to_dict
     def get_user(self, username):
         return self.session.query(User).get(username)
 
-    @inject_model(True)
-    def create_vectors(self, model, vectors):
-        for vector in vectors:
-            vector.model = model
+    @to_dicts
+    def create_vectors(self, name, vectors):
+        cnt = 0
+        created = []
+
+        for vector in pack_vectors(vectors):
+            vector['model_name'] = name
+            vector = Vector(**vector)
+            created.append(vector)
             self.session.add(vector)
+            cnt += 1
 
         self._commit()
-        self.logger.info('created %s vectors for model %s' %
-                         (len(vectors), model.name))
-        return vectors
+        self.logger.info('created %s vectors for model %s' % (cnt, name))
+        return created
+
+    @to_dicts
+    def update_vectors(self, name, vectors):
+        cnt = 0
+        by_word = {}
+        updated = []
+
+        for vector in pack_vectors(vectors):
+            by_word[vector['word']] = vector
+
+        for v in self.session.query(Vector).filter(
+                Vector.model_name == name).filter(
+                    Vector.word.in_(by_word.keys())):
+            updated.append(v)
+            for k in by_word[v.word]:
+                setattr(v, k, by_word[v.word][k])
+            cnt += 1
+
+        self._commit()
+        self.logger.info('updated %s vectors for model %s' % (cnt, name))
+        return updated
 
     def model_exists(self, name):
         return self.session.query(func.count(Model.name)).filter(
@@ -123,6 +147,7 @@ class DbService(FasttextService):
     def get_model(self, name):
         return self.session.query(Model).get(name)
 
+    @to_dict
     def create_model(self, **kwargs):
         model = Model(**kwargs)
         self.session.add(model)
@@ -205,6 +230,14 @@ class DbService(FasttextService):
         q = self._eq_or_range(float, Model.t, t, q)
 
         return q
+
+    def get_words(self, name, words=None):
+        q = self.session.query(Vector.word)
+
+        if words is not None:
+            q = q.filter(or_(* [Vector.word.like(w) for w in words]))
+
+        return [x[0] for x in q]
 
     @to_dict
     def update_model(self, name, **kwargs):

@@ -48,7 +48,7 @@ CONFIG_DEFAULTS = {
             'password': ['password']
         },
         'json': {
-            'name': ['username', 'userName'],
+            'username': ['username', 'userName'],
             'password': ['password']
         }
     },

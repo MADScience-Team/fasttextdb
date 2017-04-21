@@ -16,7 +16,7 @@ from .base import FtTestBase, my_dir, ftdb_path
 class WebApiTestCase(LiveServerTestCase, FtTestBase):
     def create_app(self):
         self.path, self.url = self.create_temp_db()
-        print('url is %s' % self.url)
+
         # Load models from YAML file
         with self.open_resource('models.yml') as mfile:
             self.mdat = yaml.load(mfile)
@@ -30,10 +30,10 @@ class WebApiTestCase(LiveServerTestCase, FtTestBase):
 
         config['url'] = self.url
         app.config['TESTING'] = True
-        print('secret before %s' % app.secret_key)
 
         config['users'] = {
             'testuser1': {
+                'username': 'testuser1',
                 'password_hash':
                 '$5$rounds=535000$IkNqfgzAuCxI2RHW$v1OxN5O7GJxGmPbmFF62D4/kaDZcq3qDhY081KbqzyD'
             }
@@ -53,4 +53,4 @@ class WebApiTestCase(LiveServerTestCase, FtTestBase):
     def test_get_model(self):
         with fasttextdb(self.get_web_url()) as ftdb:
             m = ftdb.get_model('model_1')
-            self.assertEqual(m.name, 'model_1')
+            self.assertEqual(m['name'], 'model_1')

@@ -3,12 +3,13 @@ import gzip
 import bz2
 import json
 
-from tempfile import NamedTemporaryFile,mkstemp
+from tempfile import NamedTemporaryFile, mkstemp
 from unittest import TestCase
 from contextlib import contextmanager
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fasttextdb import Base, fasttextdb, Model, Vector
+from fasttextdb.vectors import *
 
 my_dir = os.path.dirname(__file__)
 ftdb_path = os.path.join(my_dir, os.pardir, 'scripts', 'ftdb')
@@ -29,8 +30,9 @@ class FtTestBase(TestCase):
             vectors = self.read_vectors(res)
 
             for word in vectors:
-                v = Vector(model=model, word=word)
-                v.pack_values(vectors[word])
+                v = Vector(word=word)
+                v.packed_values = pack_values(vectors[word])
+                v.model = model
                 session.add(v)
 
             session.commit()
@@ -57,12 +59,12 @@ class FtTestBase(TestCase):
             yield url
 
     def create_temp_db(self):
-        (temp_db_file,temp_db_path)=mkstemp()
-        url= 'sqlite:///%s' % temp_db_path
+        (temp_db_file, temp_db_path) = mkstemp()
+        url = 'sqlite:///%s' % temp_db_path
         self.prepare_db(url)
-        return temp_db_path,url
+        return temp_db_path, url
 
-    def remove_temp_db(self,path):
+    def remove_temp_db(self, path):
         os.remove(path)
 
     def prepare_db(self, url='sqlite://'):
@@ -99,8 +101,7 @@ class FtTestBase(TestCase):
 
     def query_model(self, url, model):
         session = self.get_session(url)
-        return list(
-            session.query(Model).filter(Model.name == model))[0].to_dict()
+        return session.query(Model).get(model).to_dict()
 
     def query_vectors(self, url, words=None):
         session = self.get_session(url)
@@ -110,7 +111,7 @@ class FtTestBase(TestCase):
         else:
             vectors = session.query(Vector).filter(Vector.word.in_(words))
 
-        return {v.word: v.unpack_values() for v in vectors}
+        return {v.word: unpack_values(v.packed_values) for v in vectors}
 
     def json_to_model(self, model):
         model = json.loads(model)

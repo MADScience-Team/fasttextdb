@@ -37,7 +37,7 @@ class GetVectorsTestCase(FtTestBase):
 
             with fasttextdb(url) as ftdb:
                 act_vectors = ftdb.get_vectors_for_words(model, words)
-                act_vectors = {v.word: v.unpack_values() for v in act_vectors}
+                act_vectors = {v['word']: v['values'] for v in act_vectors}
 
             self.compare_vectors(exp_vectors, act_vectors,
                                  'get_vectors %s' % model)

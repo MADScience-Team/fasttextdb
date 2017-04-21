@@ -51,8 +51,7 @@ class QueryModelsTestCase(FtTestBase):
                 query = self.mdat['queries'][q]['query']
                 exp_models = self.mdat['queries'][q]['expected'] or []
                 exp_models = {m: self.models[m] for m in exp_models}
-                act_models = list(ftdb.find_models(**query))
-                act_models = {m.name: m.to_dict() for m in act_models}
+                act_models = {m['name']: m for m in ftdb.find_models(**query)}
                 self.check('api', exp_models, act_models)
 
     def test_cli_model_query(self):

@@ -43,15 +43,36 @@ def _iter_csv(data):
         yield line.read()
 
 
-@app.route("/api/model/<id_or_name>/vectors", methods=['POST'])
-def api_create_vectors(id_or_name):
-    if id_or_name.isdigit():
-        id_or_name = int(id_or_name)
+@app.route("/api/model/<name>/words", methods=['POST', 'GET'])
+def api_get_words(name):
+    if request.service.model_exists(name):
+        if request.method == 'POST':
+            words = request.json
+        else:
+            words = request.words
 
-    if request.service.model_exists(id_or_name):
-        vectors = [Vector.from_dict(**v) for v in request.json]
-        vectors = request.service.create_vectors(id_or_name, vectors)
-        return jsonify([v.to_json() for v in vectors])
+        if words and len(words):
+            words = request.service.get_words(name, words)
+        else:
+            words = request.service.get_words(name)
+
+        return jsonify(words)
+    else:
+        raise NotFoundException('Could not find a model with name %s' % name)
+
+
+@app.route("/api/model/<name>/vectors", methods=['POST'])
+def api_create_vectors(name):
+    if request.service.model_exists(name):
+        return jsonify(request.service.create_vectors(name, request.json))
+    else:
+        raise NotFoundException('Could not find a model with ID %s' % id)
+
+
+@app.route("/api/model/<name>/vectors", methods=['PUT'])
+def api_update_vectors(name):
+    if request.service.model_exists(name):
+        return jsonify(request.service.update_vectors(name, request.json))
     else:
         raise NotFoundException('Could not find a model with ID %s' % id)
 
@@ -66,8 +87,6 @@ def api_model_exists(name):
 @app.route("/api/model/<name>", methods=['GET'])
 @api_auth
 def api_get_model(name):
-    print('#api_get_model %s' % name)
-
     if request.service.model_exists(name):
         model = request.service.get_model(name)
         return jsonify(model)
@@ -79,8 +98,7 @@ def api_get_model(name):
 @app.route("/api/model", methods=['POST'])
 @api_auth
 def api_create_model():
-    model = request.service.create_model(**request.json)
-    return jsonify(model.to_dict()), 201
+    return jsonify(request.service.create_model(**request.json)), 201
 
 
 @app.route("/api/search/model", methods=['PUT', 'POST'])
@@ -144,23 +162,6 @@ def api_get_vectors_for_model(name):
         return jsonify(vectors)
     else:
         raise NotFoundException('Could not find a model with name %s' % name)
-
-
-def _vectors_response(vectors, template, method, **kwargs):
-    at = get_requested_type()
-
-    if at == 'csv':
-        return Response(
-            _iter_csv([v.to_list() for v in vectors]), mimetype='text/csv')
-
-    return jsonify([v.to_dict() for v in vectors])
-
-
-def _vectors_from_json(model, json):
-    for vector in json:
-        v = Vector(word=vector['word'], model=model)
-        v.pack_values(vector['values'])
-        yield v
 
 
 @app.route('/api/model/<int:id>/upload/vectors', methods=['POST'])

@@ -86,7 +86,6 @@ def user_loader():
 def prepare_db():
     global engine, Session, ftdb
     engine = create_engine(config['url'])
-    print('engine for %s' % config['url'])
     Session = sessionmaker(bind=engine)
     Base.metadata.create_all(engine)
     ftdb = fasttextdb(config['url'])

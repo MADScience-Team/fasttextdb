@@ -42,26 +42,37 @@ def open_for_mime_type(file, mode='rt'):
 
 
 @contextmanager
-def model_file(file_):
+def model_file(file_, otype=tuple):
     """
     Context: prepare to process vectors from a file-like object. Returns tuple
-    of (number_words, vector_length, file_pointer) after reading the first line
-    for the number of words plus length of vectors.
+    of (number_words, vector_length) after reading the first line
+    for the number of words plus length of vectors. If otype is dict, returns
+    {'num_words': num_words, 'dim': vector_length} instead.
     """
     l = file_.readline()
     parts = l.split()
-    yield (int(parts[0]), int(parts[1]), file_)
+
+    if otype is tuple:
+        yield int(parts[0]), int(parts[1])
+    else:
+        yield {'num_words': int(parts[0]), 'dim': int(parts[1])}
 
 
-def read_model_file(file_):
+def read_model_file(file_, otype=tuple):
     """
     Generator: reads words and vectors from a file (assumes it was opened with
-    model_file). Returns tuples of (word, vector), where vector is a list of
-    floats.
+    model_file). Yields tuples of (word, vector), where vector is a list of
+    floats. If otype is dict, yields {'word':word,'values':vector} instead.
     """
     l = file_.readline()
 
-    while l:
-        parts = l.split()
-        yield (parts[0], [float(x) for x in parts[1:]])
-        l = file_.readline()
+    if otype is tuple:
+        while l:
+            parts = l.split()
+            yield parts[0], [float(x) for x in parts[1:]]
+            l = file_.readline()
+    else:
+        while l:
+            parts = l.split()
+            yield {'word': parts[0], 'values': [float(x) for x in parts[1:]]}
+            l = file_.readline()
