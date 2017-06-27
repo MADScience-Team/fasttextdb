@@ -42,7 +42,6 @@ listed in `requirements.txt`. Notable ones include:
 
 - SQLAlchemy
 - Flask
-- Flask-Login
 - passlib
 - python-magic
 - PyYAML
@@ -148,3 +147,42 @@ local database where the web application will store its data.
 
 Many of the configuration keys have a corresponding command line
 argument that can be used to override the configuration value.
+
+Here's an example config.yml file:
+
+```yaml
+# Key used by the web app to encrypt session data
+secret: SUPERSECRETKEYHERE
+
+# Flask settings, this listens on localhost only, port 5000
+host: 127.0.0.1
+port: 5000
+debug: true
+
+# Logging configuration, see Python logging.config.dictConfig
+logging:
+  formatters:
+    brief:
+      format: '%(message)s'
+    default:
+      format: '%(asctime)s %(levelname)-8s %(name)-15s %(message)s'
+      datefmt: '%Y-%m-%d %H:%M:%S'
+  handlers:
+    console:
+      class: logging.StreamHandler
+      formatter: default
+      level: INFO
+      stream: ext://sys.stderr
+  loggers:
+    fasttextdb:
+      handlers:
+        - console
+      level: INFO
+
+# Can specify usernames/password hashes here
+# Hashes can be generated using Python passlib.hash, e.g. with 
+# the sha256_crypt.hash function.
+users:
+  testuser:
+    password_hash: $5$rounds=535000$IkNqfgzAuCxI2RHW$v1OxN5O7GJxGmPbmFF62D4/kaDZcq3qDhY081KbqzyD
+```

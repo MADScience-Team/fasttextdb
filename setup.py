@@ -4,15 +4,15 @@ from setuptools import setup
 
 setup(
     name="fasttextdb",
-    version="0.0.1",
+    version="0.0.2",
     author="Jason Veiga",
     author_email="jasonveiga@me.com",
     description="Python package, scripts and webapp for managing FastText model data",
     scripts=['scripts/ftdb'],
     license="?",
     install_requires=[
-        'flask', 'sqlalchemy', 'flask-login', 'six', 'pyyaml', 'requests',
-        'progressbar2', 'passlib', 'python-magic'
+        'flask', 'sqlalchemy', 'six', 'pyyaml', 'requests', 'progressbar2',
+        'passlib', 'python-magic'
     ],
     classifiers=[
         'Development Status :: 3 - Alpha',

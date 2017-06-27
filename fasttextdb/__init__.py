@@ -55,6 +55,11 @@ def get_parser(description):
         help='model ID or name (if not specified will try to guess based on the file header)'
     )
 
+    file_parser.add_argument(
+        '--force',
+        help='attempts to delete existing vectors and reload from scratch, may be faster',
+        action='store_true')
+
     update_parser = subparsers.add_parser(
         'update', help='update model parameters')
     update_parser.set_defaults(func=update_model)
@@ -198,7 +203,8 @@ def file_subcommand(args):
     logger = logging.getLogger('fasttextdb.file')
     logger.info('connecting to database')
     with fasttextdb(config['url'], config=config) as ftdb:
-        ftdb.commit_file(args.model, args.input, config['progress'])
+        ftdb.commit_file(
+            args.model, args.input, config['progress'], force=args.force)
 
 
 def update_model(args):

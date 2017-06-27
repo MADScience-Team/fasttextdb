@@ -40,7 +40,8 @@ class DbService(FasttextService):
                  config=None,
                  engine=None,
                  Session=None,
-                 session=None):
+                 session=None,
+                 **kwargs):
         super().__init__(url, name=name, config=config)
         self.engine = engine
         self.Session = Session
@@ -101,6 +102,12 @@ class DbService(FasttextService):
     @to_dict
     def get_user(self, username):
         return self.session.query(User).get(username)
+
+    def commit_file(self, name, file, progress=False, force=False):
+        if force:
+            self.session.query(Vector).filter(
+                Vector.model_name == name).delete()
+        super().commit_file(name, file, progress=progress, force=force)
 
     @to_dicts
     def create_vectors(self, name, vectors):
@@ -231,11 +238,14 @@ class DbService(FasttextService):
 
         return q
 
-    def get_words(self, name, words=None):
+    def get_words(self, name, words=None, exact=False):
         q = self.session.query(Vector.word)
 
         if words is not None:
-            q = q.filter(or_(* [Vector.word.like(w) for w in words]))
+            if exact:
+                q = q.filter(Vector.word.in_(set(words)))
+            else:
+                q = q.filter(or_(* [Vector.word.like(w) for w in words]))
 
         return [x[0] for x in q]
 
@@ -275,13 +285,19 @@ class DbService(FasttextService):
     def get_vectors_for_words(self,
                               name,
                               words,
+                              exact=False,
                               sort=None,
                               page=None,
                               page_size=None):
         if sort is None or not len(sort):
             sort = ['word']
-        q = self.session.query(Vector).filter(
-            Vector.model_name == name).filter(
-                or_(* [Vector.word.like(w) for w in words]))
+
+        q = self.session.query(Vector).filter(Vector.model_name == name)
+
+        if exact:
+            q = q.filter(Vector.word.in_(words))
+        else:
+            q = q.filter(or_(* [Vector.word.like(w) for w in words]))
+
         q = self._apply_limit_offset(q, sort, page, page_size)
         return q

@@ -110,6 +110,7 @@ def prepare_request():
     request.words = get_param_list('word')
     request.sort = get_param_list('sort')
     request.model = list(ints_or_strs(*get_param_list('model')))
+    request.exact = get_param('exact', False, bool)
 
 
 @app.after_request

@@ -11,7 +11,8 @@ def fasttextdb(url,
                config=None,
                engine=None,
                Session=None,
-               session=None):
+               session=None,
+               **kwargs):
     """
     Provides the correct type of service based on URL. The name is
     used in logging messages. config is passed as is to the service;
@@ -37,7 +38,8 @@ def fasttextdb(url,
             name=name,
             config=config,
             auto_page=auto_page,
-            auto_page_size=auto_page_size)
+            auto_page_size=auto_page_size,
+            **kwargs)
     else:
         return DbService(
             url,
@@ -45,4 +47,5 @@ def fasttextdb(url,
             config=config,
             engine=engine,
             Session=Session,
-            session=session)
+            session=session,
+            **kwargs)

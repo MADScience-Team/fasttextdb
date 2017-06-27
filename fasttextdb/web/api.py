@@ -2,8 +2,6 @@ from flask import jsonify
 from flask import request
 from flask import session
 
-from flask_login import login_user
-
 from functools import wraps
 
 from ..models import *
@@ -13,6 +11,9 @@ from .pages import upload_vectors_for_model
 
 
 def api_auth(func):
+    """Decorator, checks user credentials or session info when the
+    user attempts to use a protected endpoint"""
+
     @wraps(func)
     def check_auth(*args, **kwargs):
         if not request.authenticated or request.user is None:
@@ -44,6 +45,7 @@ def _iter_csv(data):
 
 
 @app.route("/api/model/<name>/words", methods=['POST', 'GET'])
+@api_auth
 def api_get_words(name):
     if request.service.model_exists(name):
         if request.method == 'POST':
@@ -52,7 +54,7 @@ def api_get_words(name):
             words = request.words
 
         if words and len(words):
-            words = request.service.get_words(name, words)
+            words = request.service.get_words(name, words, exact=request.exact)
         else:
             words = request.service.get_words(name)
 
@@ -62,6 +64,7 @@ def api_get_words(name):
 
 
 @app.route("/api/model/<name>/vectors", methods=['POST'])
+@api_auth
 def api_create_vectors(name):
     if request.service.model_exists(name):
         return jsonify(request.service.create_vectors(name, request.json))
@@ -70,6 +73,7 @@ def api_create_vectors(name):
 
 
 @app.route("/api/model/<name>/vectors", methods=['PUT'])
+@api_auth
 def api_update_vectors(name):
     if request.service.model_exists(name):
         return jsonify(request.service.update_vectors(name, request.json))
@@ -151,7 +155,8 @@ def api_get_vectors_for_model(name):
                 words,
                 sort=request.sort,
                 page=request.page,
-                page_size=request.page_size)
+                page_size=request.page_size,
+                exact=request.exact)
         else:
             vectors = request.service.get_vectors_for_model(
                 name,

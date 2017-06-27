@@ -82,7 +82,8 @@ class WebService(FasttextService):
                  name=None,
                  config=None,
                  auto_page=False,
-                 auto_page_size=1000):
+                 auto_page_size=1000,
+                 **kwargs):
         super().__init__(url, name=name, config=config)
         self.auto_page = auto_page
         self.auto_page_size = auto_page_size
@@ -206,11 +207,12 @@ class WebService(FasttextService):
     def update_model(self, name, **kwargs):
         return self.put('model/%s' % name, json=kwargs)
 
-    def get_words(self, name, words=None):
+    def get_words(self, name, words=None, exact=False):
         if words is None:
             return self.get('model/%s/words' % name)
         else:
-            return self.post('model/%s/words' % name, json=words)
+            return self.post(
+                'model/%s/words' % name, json=words, params={'exact': exact})
 
     def count_vectors_for_model(self, name):
         return self.post('model/%s/vectors/count' % name, json=[])['count']
@@ -236,7 +238,8 @@ class WebService(FasttextService):
                               words,
                               sort=None,
                               page=None,
-                              page_size=None):
+                              page_size=None,
+                              exact=False):
 
         if sort is None or not len(sort):
             sort = ['word']
@@ -244,6 +247,9 @@ class WebService(FasttextService):
         return self.post(
             'model/%s/vectors/words' % name,
             json=words,
-            params={'sort': sort,
-                    'page': page,
-                    'page_size': page_size})
+            params={
+                'sort': sort,
+                'page': page,
+                'page_size': page_size,
+                'exact': exact
+            })

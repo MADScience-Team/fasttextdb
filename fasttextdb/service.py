@@ -191,20 +191,26 @@ class FasttextService(object):
 
         return model
 
-    def _process_batch(self, name, batch):
-        by_word = {v['word']: v for v in batch}
-        existing = {
-            w: by_word[w]
-            for w in self.get_words(name, by_word.keys())
-        }
-        new_ = {v['word']: v for v in batch if v['word'] not in existing}
+    def _process_batch(self, name, batch, force=False):
+        if force:
+            new_ = {v['word']: v for v in batch}
+            existing = []
+        else:
+            by_word = {v['word']: v for v in batch}
+
+            existing = {
+                w: by_word[w]
+                for w in self.get_words(name, by_word.keys(), exact=True)
+            }
+
+            new_ = {v['word']: v for v in batch if v['word'] not in existing}
 
         if len(new_):
             self.create_vectors(name, new_.values())
         if len(existing):
             self.update_vectors(name, existing.values())
 
-    def commit_file(self, name, file, progress=False):
+    def commit_file(self, name, file, progress=False, force=False):
         if hasattr(file, 'name'):
             filename = file.name
         else:
@@ -213,9 +219,6 @@ class FasttextService(object):
         self.logger.info('storing vectors from %s for model %s' %
                          (filename, name))
         batch = []
-
-        if progress:
-            bar = progressbar.ProgressBar()
 
         cnt = 0
 
@@ -228,7 +231,8 @@ class FasttextService(object):
         with open_for_mime_type(file) as f:
             with model_file(f, otype=dict) as fmodel:
                 if progress:
-                    bar.max_value = fmodel['num_words']
+                    bar = progressbar.ProgressBar(
+                        max_value=fmodel['num_words'])
 
                 if ((fmodel['num_words'] != model['num_words']) or
                     (fmodel['dim'] != model['dim'])):
@@ -239,14 +243,14 @@ class FasttextService(object):
                     batch.append(vector)
 
                     if len(batch) == 1000:
-                        self._process_batch(name, batch)
+                        self._process_batch(name, batch, force=force)
                         cnt += len(batch)
                         batch = []
                         if progress:
                             bar.update(cnt)
 
                 if len(batch) > 0:
-                    self._process_batch(name, batch)
+                    self._process_batch(name, batch, force=force)
                     cnt += len(batch)
                     if progress:
                         bar.update(cnt)
