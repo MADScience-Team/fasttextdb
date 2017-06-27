@@ -7,7 +7,38 @@ from functools import wraps
 from ..models import *
 from .app import app, user_loader
 from ..exceptions import *
-from .pages import upload_vectors_for_model
+
+
+def upload_vectors_for_model(model):
+    file = request.files['file']
+
+    if file.filename == '':
+        raise BadRequestException('no filename specified')
+
+    mime_type = magic.from_buffer(file.stream.read(1024), mime=True)
+
+    print('#upload_vectors_for_model %s' % mime_type)
+    file.stream.seek(0)
+
+    if mime_type == 'application/x-gzip' or mime_type == 'application/gzip':
+        f = GzipFile(fileobj=file.stream)
+    elif mime_type == 'application/x-bzip2':
+        f = BZ2File(filename=file.stream)
+    else:
+        f = file.stream
+
+    cnt = 0
+
+    for vector in commit_file(
+            f,
+            engine=engine,
+            name="foo",
+            description="test model",
+            model=model,
+            session=request.session):
+        cnt += 1
+
+    return cnt
 
 
 def api_auth(func):

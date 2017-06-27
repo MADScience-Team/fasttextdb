@@ -46,10 +46,6 @@ class WebApiTestCase(LiveServerTestCase, FtTestBase):
         return '%s://%s:%s@%s:%s' % (x.scheme, 'testuser1', 'password',
                                      x.hostname, x.port)
 
-    def test_get_login(self):
-        r = requests.get(self.get_server_url() + '/login')
-        self.assertEqual(r.status_code, 200)
-
     def test_get_model(self):
         with fasttextdb(self.get_web_url()) as ftdb:
             m = ftdb.get_model('model_1')
