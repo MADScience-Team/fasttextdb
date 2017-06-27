@@ -200,7 +200,8 @@ class FasttextService(object):
 
             existing = {
                 w: by_word[w]
-                for w in self.get_words(name, by_word.keys(), exact=True)
+                for w in self.get_words(
+                    name, list(by_word.keys()), exact=True)
             }
 
             new_ = {v['word']: v for v in batch if v['word'] not in existing}
@@ -242,7 +243,7 @@ class FasttextService(object):
                 for vector in read_model_file(f, otype=dict):
                     batch.append(vector)
 
-                    if len(batch) == 1000:
+                    if len(batch) == 500:
                         self._process_batch(name, batch, force=force)
                         cnt += len(batch)
                         batch = []

@@ -1,7 +1,10 @@
 from flask import jsonify
 from flask import request
 from flask import session
+from base64 import b64encode, b64decode
+import bz2
 
+import json
 from functools import wraps
 
 from ..models import *
@@ -94,11 +97,24 @@ def api_get_words(name):
         raise NotFoundException('Could not find a model with name %s' % name)
 
 
+def _unpack_vectors(vectors):
+    for v in vectors:
+        nv = dict(**v)
+
+        if 'packed_values' in nv:
+            nv['values'] = json.loads(
+                bz2.decompress(b64decode(nv['packed_values'])))
+            del nv['packed_values']
+
+        yield nv
+
+
 @app.route("/api/model/<name>/vectors", methods=['POST'])
 @api_auth
 def api_create_vectors(name):
     if request.service.model_exists(name):
-        return jsonify(request.service.create_vectors(name, request.json))
+        data = list(_unpack_vectors(request.json))
+        return jsonify(request.service.create_vectors(name, data))
     else:
         raise NotFoundException('Could not find a model with ID %s' % id)
 
@@ -107,7 +123,8 @@ def api_create_vectors(name):
 @api_auth
 def api_update_vectors(name):
     if request.service.model_exists(name):
-        return jsonify(request.service.update_vectors(name, request.json))
+        data = list(_unpack_vectors(request.json))
+        return jsonify(request.service.update_vectors(name, data))
     else:
         raise NotFoundException('Could not find a model with ID %s' % id)
 

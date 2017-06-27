@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
 from fasttextdb.web.app import run_app
-from fasttextdb.web import pages, api
+from fasttextdb.web import api
 
-run_app()
+run_app(threaded=True)

@@ -150,13 +150,11 @@ class WebService(FasttextService):
 
     def create_vectors(self, name, vectors):
         vectors = encode_vectors(pack_vectors(vectors))
-        return self.post(
-            'model/%s/vectors', json=[v.to_dict() for v in vectors])
+        return self.post('model/%s/vectors' % name, json=list(vectors))
 
     def update_vectors(self, name, vectors):
         vectors = encode_vectors(pack_vectors(vectors))
-        return self.put(
-            'model/%s/vectors', json=[v.to_dict() for v in vectors])
+        return self.put('model/%s/vectors' % name, json=list(vectors))
 
     def find_models(self,
                     owner=None,

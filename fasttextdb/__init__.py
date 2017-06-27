@@ -171,7 +171,7 @@ def get_parser(description):
     find_vectors_parser.add_argument('--model', help="model ID or name")
     find_vectors_parser.add_argument(
         '--words',
-        help="matching words to retrieve (% is wildcard)",
+        help="matching words to retrieve (%% is wildcard)",
         nargs='+')
     find_vectors_parser.add_argument(
         '--packed',

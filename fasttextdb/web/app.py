@@ -7,13 +7,13 @@ import bz2
 import gzip
 import json
 
-from flask import (Flask, request, render_template, send_from_directory,
-                   jsonify, make_response, Response, redirect, url_for, flash,
-                   get_flashed_messages, session)
+from flask import (Flask, request, current_app, render_template,
+                   send_from_directory, jsonify, make_response, Response,
+                   redirect, url_for, flash, get_flashed_messages, session)
 
 from sqlalchemy import create_engine, Column, Integer, String, Float
 
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 from sqlalchemy.sql.expression import asc, desc
 
@@ -28,9 +28,6 @@ from ..urlhandler import *
 __all__ = ['app', 'run_app']
 
 config = load_config()
-engine = None
-Session = None
-ftdb = None
 
 app = Flask(__name__)
 app.secret_key = config['secret']
@@ -46,8 +43,12 @@ else:
     app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
 
 
-def run_app():
-    app.run(host=config['host'], port=config['port'], debug=config['debug'])
+def run_app(**kwargs):
+    app.run(
+        host=config['host'],
+        port=config['port'],
+        debug=config['debug'],
+        **kwargs)
 
 
 def page_request(query):
@@ -84,17 +85,17 @@ def user_loader():
 
 @app.before_first_request
 def prepare_db():
-    global engine, Session, ftdb
-    engine = create_engine(config['url'])
-    Session = sessionmaker(bind=engine)
-    Base.metadata.create_all(engine)
-    ftdb = fasttextdb(config['url'])
+    current_app.engine = create_engine(config['url'])
+    current_app.Session = scoped_session(sessionmaker(bind=current_app.engine))
+    Base.metadata.create_all(current_app.engine)
+    current_app.ftdb = fasttextdb(config['url'], Session=current_app.Session)
 
 
 @app.before_request
 def prepare_request():
     request.config = config
-    request.service = ftdb
+    #    request.service = current_app.ftdb
+    request.service = fasttextdb(config['url'], Session=current_app.Session)
     request.service.open()
     request.user, request.authenticated = config['authentication']['loader']()
 
@@ -119,7 +120,12 @@ def cleanup(response):
     return response
 
 
-@app.errorhandler(Exception)
+@app.teardown_request
+def teardown(exception=None):
+    current_app.Session.remove()
+
+
+#@app.errorhandler(Exception)
 def handle_errors(exception):
     request.service.close(exception)
     logging.error(exception, exc_info=True)
